@@ -1,0 +1,17 @@
+{
+    "authors": [
+        {
+            "name": "apasz",
+            "role": "CREATOR"
+        }
+    ],
+    "description": "We're back, back again, back in black (well almost black). A very dark grey, monochrome interface theme \nIncludes optional support for the Minimap mod \nWhen it can be figured out how to get modparams to work with stylesheets in an idiomatic way, modparams be back too",
+    "name": "Dark UI",
+    "summary": "An almost black and monochrome interface theme",
+    "tags": [
+        "UI",
+        "Misc",
+        "Script Mod"
+    ],
+    "url": ""
+}
