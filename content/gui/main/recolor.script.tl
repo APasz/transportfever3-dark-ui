@@ -19,7 +19,7 @@ local function makeMonochrome(brightness : number) : GResColor
 end
 
 data.overwrite = function(_params : table)
-	local colorRes = api.gui.genericRep.get(api.gui.genericRep.find("::/gui/main/default.gres"))
+	local colorRes = api.gui.genericRep.get(api.gui.genericRep.find("/gui/main/default_colors.gres"))
 	local colors = colorRes.data as DefaultColors
 
 	colors.BaseVeryDark = makeMonochrome(baseBrightness)

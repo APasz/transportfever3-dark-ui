@@ -5,13 +5,81 @@
             "role": "CREATOR"
         }
     ],
-    "description": "We're back, back again, back in black (well almost black). A very dark grey, monochrome interface theme \nIncludes optional support for the Minimap mod \nWhen it can be figured out how to get modparams to work with stylesheets in an idiomatic way, modparams be back too",
+    "description": "An almost-black, monochrome interface theme for Transport Fever 3 \nIncludes optional support for the Minimap mod \nMore configuration options are planned once mod parameters work cleanly with stylesheets\nSignal icons currently don't appear to be overridable",
     "name": "Dark UI",
-    "summary": "An almost black and monochrome interface theme",
+    "summary": "An almost-black, monochrome interface theme",
+    "localization": {
+        "en": {
+            "name": "Dark UI",
+            "summary": "An almost-black, monochrome interface theme",
+            "description": "An almost-black, monochrome interface theme for Transport Fever 3 \nIncludes optional support for the Minimap mod \nMore configuration options are planned once mod parameters work cleanly with stylesheets\nSignal icons currently don't appear to be overridable"
+        },
+        "de": {
+            "name": "Dark UI",
+            "summary": "Ein fast schwarzes, monochromes Oberflächenthema",
+            "description": "Ein fast schwarzes, monochromes Oberflächenthema für Transport Fever 3.\nEnthält optionale Unterstützung für den Mod \"Minimap\".\nWeitere Konfigurationsoptionen sind geplant, sobald Mod-Parameter sauber mit Stylesheets funktionieren.\nSignal icons currently don't appear to be overridable"
+        },
+        "es": {
+            "name": "Dark UI",
+            "summary": "Un tema de interfaz casi negro y monocromático",
+            "description": "Un tema de interfaz casi negro y monocromático para Transport Fever 3.\nIncluye compatibilidad opcional con el mod Minimap.\nSe prevén más opciones de configuración cuando los parámetros de los mods funcionen correctamente con las hojas de estilo.\nSignal icons currently don't appear to be overridable"
+        },
+        "fr": {
+            "name": "Dark UI",
+            "summary": "Un thème d’interface presque noir et monochrome",
+            "description": "Un thème d’interface presque noir et monochrome pour Transport Fever 3.\nInclut une prise en charge facultative du mod Minimap.\nD’autres options de configuration sont prévues lorsque les paramètres de mod fonctionneront correctement avec les feuilles de style.\nSignal icons currently don't appear to be overridable"
+        },
+        "it": {
+            "name": "Dark UI",
+            "summary": "Un tema dell'interfaccia quasi nero e monocromatico",
+            "description": "Un tema dell'interfaccia quasi nero e monocromatico per Transport Fever 3.\nInclude il supporto opzionale per la mod Minimap.\nSono previste ulteriori opzioni di configurazione quando i parametri delle mod funzioneranno correttamente con i fogli di stile.\nSignal icons currently don't appear to be overridable"
+        },
+        "ja": {
+            "name": "Dark UI",
+            "summary": "ほぼ黒一色のモノクロームUIテーマ",
+            "description": "Transport Fever 3向けの、ほぼ黒一色のモノクロームUIテーマです。\nMinimap MODへの任意の対応を含みます。\nMODパラメータがスタイルシートで適切に動作するようになれば、追加の設定オプションを予定しています。\nSignal icons currently don't appear to be overridable"
+        },
+        "ko": {
+            "name": "Dark UI",
+            "summary": "거의 검은색의 단색 인터페이스 테마",
+            "description": "Transport Fever 3용 거의 검은색의 단색 인터페이스 테마입니다.\nMinimap 모드를 선택적으로 지원합니다.\n모드 매개변수가 스타일시트에서 제대로 작동하게 되면 추가 설정 옵션을 제공할 예정입니다.\nSignal icons currently don't appear to be overridable"
+        },
+        "nl": {
+            "name": "Dark UI",
+            "summary": "Een bijna zwart, monochroom interfacethema",
+            "description": "Een bijna zwart, monochroom interfacethema voor Transport Fever 3.\nBevat optionele ondersteuning voor de Minimap-mod.\nMeer configuratieopties zijn gepland zodra modparameters goed met stylesheets werken.\nSignal icons currently don't appear to be overridable"
+        },
+        "pl": {
+            "name": "Dark UI",
+            "summary": "Prawie czarny, monochromatyczny motyw interfejsu",
+            "description": "Prawie czarny, monochromatyczny motyw interfejsu dla Transport Fever 3.\nObejmuje opcjonalną obsługę moda Minimap.\nDalsze opcje konfiguracji są planowane, gdy parametry modów będą poprawnie działać z arkuszami stylów.\nSignal icons currently don't appear to be overridable"
+        },
+        "pt_BR": {
+            "name": "Dark UI",
+            "summary": "Um tema de interface quase preto e monocromático",
+            "description": "Um tema de interface quase preto e monocromático para Transport Fever 3.\nInclui suporte opcional ao mod Minimap.\nMais opções de configuração estão previstas quando os parâmetros dos mods funcionarem corretamente com folhas de estilo.\nSignal icons currently don't appear to be overridable"
+        },
+        "ru": {
+            "name": "Dark UI",
+            "summary": "Почти чёрная монохромная тема интерфейса",
+            "description": "Почти чёрная монохромная тема интерфейса для Transport Fever 3.\nВключает необязательную поддержку мода Minimap.\nДополнительные параметры настройки появятся, когда параметры модов будут корректно работать со стилями.\nSignal icons currently don't appear to be overridable"
+        },
+        "zh_CN": {
+            "name": "Dark UI",
+            "summary": "近乎全黑的单色界面主题",
+            "description": "适用于 Transport Fever 3 的近乎全黑单色界面主题。\n包含对 Minimap 模组的可选支持。\n一旦模组参数能够与样式表正常配合使用，计划加入更多配置选项。\nSignal icons currently don't appear to be overridable"
+        },
+        "zh_TW": {
+            "name": "Dark UI",
+            "summary": "近乎全黑的單色介面主題",
+            "description": "適用於 Transport Fever 3 的近乎全黑單色介面主題。\n包含對 Minimap 模組的選用支援。\n一旦模組參數能與樣式表正常搭配使用，預計會加入更多設定選項。\nSignal icons currently don't appear to be overridable"
+        }
+    },
     "tags": [
         "UI",
         "Misc",
         "Script Mod"
     ],
-    "url": ""
+    "url": "https://mod.io/g/transportfever3/m/dark-ui",
+    "url_github": "https://github.com/APasz/transportfever3-dark-ui"
 }
