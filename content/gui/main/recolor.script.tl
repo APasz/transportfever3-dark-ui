@@ -2,10 +2,18 @@ local record ColorInternal
 	makeFromHSVa : function(number, number, number) : GResColor
 end
 
-local internal = ug_require "::/gui/main/color_internal.lua" as ColorInternal
+local record Logger
+	debug : function(string)
+end
 
--- Enable temporarily when diagnosing
-local debugLoggingEnabled = false
+local record Logging
+	new : function(string, boolean) : Logger
+end
+
+local internal = ug_require "::/gui/main/color_internal.lua" as ColorInternal
+local debugLoggingEnabled = ug_require "apasz_dark_ui_1::/gui/main/logging_config.tl" as boolean
+local logging = ug_require "apasz_dark_ui_1::/gui/main/logging.lua" as Logging
+local logger = logging.new("Dark UI", debugLoggingEnabled)
 
 local monochromeHue = 0
 local monochromeSaturation = 0.0
@@ -38,13 +46,11 @@ data.overwrite = function(_params : table)
 
 	colorRes:setData(colors as table)
 
-	if debugLoggingEnabled then
-		debugPrint(
-			"[Dark UI] applied palette: baseBrightness="
-			.. tostring(baseBrightness)
-			.. ", accentBrightness=" .. tostring(accentBrightness)
-		)
-	end
+	logger.debug(
+		"Applied palette: baseBrightness="
+		.. tostring(baseBrightness)
+		.. ", accentBrightness=" .. tostring(accentBrightness)
+	)
 end
 
 return data
