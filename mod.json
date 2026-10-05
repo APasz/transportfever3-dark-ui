@@ -1,7 +1,13 @@
 {
     "cosmetic": true,
     "dependencies": null,
-    "incompatibilities": null,
+    "incompatibilities": [
+        {
+            "mod": {
+                "modId": "clear_ui_1"
+            }
+        }
+    ],
     "modId": "apasz_dark_ui_1",
     "options": null,
     "params": null,
