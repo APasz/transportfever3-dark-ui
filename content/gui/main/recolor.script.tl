@@ -1,7 +1,3 @@
-local record ColorInternal
-	makeFromHSVa : function(number, number, number) : GResColor
-end
-
 local record Logger
 	debug : function(string)
 end
@@ -10,20 +6,17 @@ local record Logging
 	new : function(string, boolean) : Logger
 end
 
-local internal = ug_require "::/gui/main/color_internal.lua" as ColorInternal
 local debugLoggingEnabled = ug_require "apasz_dark_ui_1::/gui/main/logging_config.tl" as boolean
 local logging = ug_require "apasz_dark_ui_1::/gui/main/logging.lua" as Logging
 local logger = logging.new("Dark UI", debugLoggingEnabled)
 
-local monochromeHue = 0
-local monochromeSaturation = 0.0
 local baseBrightness = 0.03
 local accentBrightness = 0.15
 
 local data : OverwriteGuiRes = {}
 
 local function makeMonochrome(brightness : number) : GResColor
-	return internal.makeFromHSVa(monochromeHue, monochromeSaturation, brightness)
+	return { brightness, brightness, brightness, 1.0 }
 end
 
 data.overwrite = function(_params : table)
