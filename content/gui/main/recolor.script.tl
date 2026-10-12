@@ -6,12 +6,19 @@ local record Logging
 	new : function(string, boolean) : Logger
 end
 
+local record Palette
+	baseBrightness : number
+	accentBrightness : number
+	darkGray : number
+end
+
 local debugLoggingEnabled = ug_require "apasz_dark_ui_1::/gui/main/logging_config.tl" as boolean
 local logging = ug_require "apasz_dark_ui_1::/gui/main/logging.lua" as Logging
 local logger = logging.new("Dark UI", debugLoggingEnabled)
 
-local baseBrightness = 0.03
-local accentBrightness = 0.15
+local palette = ug_require "apasz_dark_ui_1::/gui/main/dark_ui_palette.lua" as Palette
+local baseBrightness = palette.baseBrightness
+local accentBrightness = palette.accentBrightness
 local DEFAULT_COLORS_RESOURCE = "::/gui/main/default_colors.gres"
 
 local data : OverwriteGuiRes = {}
@@ -29,7 +36,7 @@ data.overwrite = function(_params : table)
 
 	colors.BaseVeryDark = makeMonochrome(baseBrightness)
 	colors.BaseDark = makeMonochrome(baseBrightness + 0.03)
-	colors.BaseDarkMedium = makeMonochrome(baseBrightness + 0.06)
+	colors.BaseDarkMedium = makeMonochrome(palette.darkGray)
 	colors.BaseMedium = makeMonochrome(baseBrightness + 0.09)
 	colors.BaseLightMedium = makeMonochrome(baseBrightness + 0.12)
 	colors.BaseLight = makeMonochrome(baseBrightness + 0.15)

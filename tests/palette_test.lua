@@ -40,6 +40,9 @@ local environment = setmetatable({
 		},
 	},
 	ug_require = function(path)
+		if path == "apasz_dark_ui_1::/gui/main/dark_ui_palette.lua" then
+			return dofile("content/gui/main/dark_ui_palette.lua")
+		end
 		if path == "apasz_dark_ui_1::/gui/main/logging_config.tl" then
 			return false
 		end
