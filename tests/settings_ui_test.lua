@@ -27,6 +27,15 @@ local uiTweaksSettings = {
 package.loaded[UI_TWEAKS_MODULE] = uiTweaksSettings
 package.loaded[UI_TWEAKS_INTEGRATION_MODULE] = dofile("content/gui/main/dark_ui_ui_tweaks.lua")
 
+-- Upload validation loads scripts before the runtime resource API is available.
+api = { gui = {} }
+ug_require = function(path)
+	error("Dark UI loaded a runtime dependency during validation: " .. path)
+end
+dofile("content/gui/main/dark_ui_game_bar_theme.script.lua")
+local validationThemeConfig = data()
+assert(type(validationThemeConfig.install) == "function")
+
 local settings = dofile("content/gui/main/dark_ui_settings.lua")
 package.loaded[DARK_UI_MODULE] = settings
 
@@ -166,10 +175,12 @@ local function assertCurrentClasses(scopeClass)
 	assert(#classes == expectedCount)
 end
 
-local function installTheme()
-	dofile("content/gui/main/dark_ui_game_bar_theme.script.lua")
+local function installTheme(themeConfig)
+	if themeConfig == nil then
+		dofile("content/gui/main/dark_ui_game_bar_theme.script.lua")
+		themeConfig = data()
+	end
 	local themedGameBar
-	local themeConfig = data()
 	themeConfig.install({
 		ReplaceRecipe = function(original, replacement)
 			assert(original == originalGameBar)
@@ -180,7 +191,7 @@ local function installTheme()
 end
 
 resetHooks()
-local themeConfig, themedGameBar = installTheme()
+local themeConfig, themedGameBar = installTheme(validationThemeConfig)
 local gameBarParams = { test = true, customModField = {} }
 assert(render(themedGameBar, gameBarParams) == gameBarParams, "Dark UI did not preserve the GameBar parameters")
 assert(existingGameBarCalls == 1)
@@ -293,7 +304,10 @@ assert(not optionalReplacementCalled, "Dark UI installed its UIT theme without U
 
 uiTweaksAvailable = true
 uiTweaksSettings.API_VERSION = 2
-assert(not pcall(dofile, "content/gui/main/dark_ui_game_bar_theme.script.lua"))
+dofile("content/gui/main/dark_ui_game_bar_theme.script.lua")
+local incompatibleSettingsOk, incompatibleSettingsError = pcall(data().install, {})
+assert(not incompatibleSettingsOk)
+assert(incompatibleSettingsError:find("Dark UI requires UI Tweaks settings API version 1", 1, true))
 uiTweaksSettings.API_VERSION = 1
 
 local modFile = assert(io.open("mod.json", "r"))
