@@ -12,6 +12,7 @@ local logger = logging.new("Dark UI", debugLoggingEnabled)
 
 local baseBrightness = 0.03
 local accentBrightness = 0.15
+local DEFAULT_COLORS_RESOURCE = "::/gui/main/default_colors.gres"
 
 local data : OverwriteGuiRes = {}
 
@@ -20,7 +21,10 @@ local function makeMonochrome(brightness : number) : GResColor
 end
 
 data.overwrite = function(_params : table)
-	local colorRes = api.gui.genericRep.get(api.gui.genericRep.find("/gui/main/default_colors.gres"))
+	local resourceId = api.gui.genericRep.find(DEFAULT_COLORS_RESOURCE)
+	assert(resourceId >= 0, "Dark UI could not find the game's default colour palette")
+	local colorRes = api.gui.genericRep.get(resourceId)
+	assert(colorRes ~= nil and type(colorRes.data) == "table", "Dark UI received an invalid default colour palette")
 	local colors = colorRes.data as DefaultColors
 
 	colors.BaseVeryDark = makeMonochrome(baseBrightness)

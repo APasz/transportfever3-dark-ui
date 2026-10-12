@@ -6,6 +6,21 @@
             "mod": {
                 "modId": "clear_ui_1"
             }
+        },
+        {
+            "mod": {
+                "modId": "Lo2k_Blue_UI"
+            }
+        },
+        {
+            "mod": {
+                "modId": "Lo2k_Brown_UI"
+            }
+        },
+        {
+            "mod": {
+                "modId": "Lo2k_Lavander_UI"
+            }
         }
     ],
     "modId": "apasz_dark_ui_1",
@@ -17,7 +32,7 @@
     "preRunScript": {
         "fileName": ""
     },
-    "revision": 2,
+    "revision": 3,
     "runScript": {
         "fileName": ""
     },
