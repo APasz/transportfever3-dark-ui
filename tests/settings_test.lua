@@ -10,17 +10,8 @@ package.loaded[DARK_UI_MODULE] = settings
 local schema = dofile("../ui_tweaks/content/gui/ui_tweaks/settings_schema.lua")
 schema.validateSection(settings.section, "Dark UI")
 
-local function defaultSelection()
-	local result = {}
-	for _, option in ipairs(settings.options) do
-		result[option.stateKey] = option.default
-	end
-	return result
-end
-
-local selected = defaultSelection()
-assert(selected.gameBarIncludeBulldozer == false)
-assert(selected.gameBarStateContrast == "standard")
+assert(settings.includeBulldozer.default == false)
+assert(settings.stateContrast.default == "standard")
 assert(settings.includeBulldozer.kind == "toggle")
 assert(settings.includeBulldozer.choices == nil)
 assert(#settings.options == 7)
@@ -42,17 +33,13 @@ for _, option in ipairs({ settings.background, settings.border, settings.icon, s
 		assert(choice.id == expected.id and choice.label == expected.label and choice.gray == expected.gray)
 	end
 end
-assert(settings.styleClass(settings.background, "dark_gray") == "dark-ui-background-dark-gray")
-assert(not pcall(settings.styleClass, {}, "vanilla"))
-assert(not pcall(settings.styleClass, settings.includeBulldozer, false))
-assert(not pcall(settings.styleClasses, nil))
-selected.gameBarIncludeBulldozer = "included"
-assert(not pcall(settings.validate, selected))
-selected = defaultSelection()
-selected.gameBarBackgroundColor = "invalid"
-assert(not pcall(settings.validate, selected))
-assert(not pcall(settings.styleClasses, selected))
-
+assert(not pcall(settings.textStyleClasses, nil))
+assert(not pcall(settings.textStyleClasses, "invalid"))
+assert(not pcall(settings.colorGray, settings.background, "black", "standard", "invalid"))
+assert(not pcall(settings.colorGray, settings.background, "invalid", "standard", "normal"))
+assert(not pcall(settings.colorGray, settings.background, "black", "invalid", "normal"))
+assert(not pcall(settings.colorGray, settings.strip, "black", "standard", "normal"))
+assert(settings.colorGray(settings.background, "vanilla", "standard", "normal") == nil)
 local legacyColors = {
 	[0] = "black",
 	[25] = "dark_gray",
@@ -110,6 +97,10 @@ api = {
 }
 local guiUtil = dofile("content/gui/main/dark_ui_gui_util.lua")
 package.loaded["apasz_dark_ui_1::/gui/main/dark_ui_gui_util.lua"] = guiUtil
+assert(guiUtil.grayColor(0)[1] == 0 and guiUtil.grayColor(255)[1] == 1)
+for _, invalid in ipairs({ -1, 256, "128", false, 0 / 0 }) do
+	assert(not pcall(guiUtil.grayColor, invalid), "Dark UI accepted an invalid grey level")
+end
 assert(guiUtil.getResource("::/gui/main/default_colors.gres") == defaultColors)
 resourceId = -1
 assert(guiUtil.findResource("::/gui/main/default_colors.gres") == nil)
@@ -206,7 +197,7 @@ package.loaded["::/gui/main/stylesheetutil.lua"] = {
 }
 dofile("content/gui/game_bar/zzz_dark_ui_game_bar.css.lua")
 local rules = data()
-assert(#rules < 200, "Dark UI exceeded its stylesheet rule budget: " .. #rules)
+assert(#rules == 12, "Dark UI exceeded its stylesheet rule budget: " .. #rules)
 resourceId = -1
 assert(not pcall(data), "Dark UI accepted a missing palette")
 resourceId = 10
@@ -216,7 +207,6 @@ assert(not pcall(data), "Dark UI accepted an invalid status colour")
 defaultColors.Positive = positive
 
 local root = "#menu.gamebar!" .. settings.GAME_BAR_STYLE_CLASS
-local target = " !" .. settings.BUTTON_STYLE_CLASS
 local bySelector = {}
 for _, rule in ipairs(rules) do
 	assert(bySelector[rule.selector] == nil, "Duplicate stylesheet selector")
@@ -225,13 +215,17 @@ for _, rule in ipairs(rules) do
 	assert(not rule.selector:find("menu.bulldozer", 1, true), "Dark UI reconstructs bulldozer styling")
 	assert(rule.style.shadowColor == nil and rule.style.shadowWidth == nil)
 	assert(rule.style.backgroundColor2 == nil)
-	if rule.selector:find("R::GameBarInfoDisplay", 1, true) then
-		assert(
-			rule.selector:find("R::GameBarEarningsPlugin", 1, true)
-				or rule.selector:find("R::GameBarTransportedPlugin", 1, true)
-		)
-	else
-		assert(rule.selector:find(target, 1, true) or rule.selector:find("R::GameBarBackground !bottom", 1, true))
+	assert(rule.selector:find("R::GameBarInfoDisplay", 1, true))
+	assert(
+		rule.selector:find("R::GameBarEarningsPlugin", 1, true)
+			or rule.selector:find("R::GameBarTransportedPlugin", 1, true)
+	)
+	assert(not rule.selector:find("ImageView", 1, true), "CSS masks inline icons")
+	assert(rule.style.color ~= nil and rule.style.backgroundColor == nil and rule.style.backgroundColor1 == nil)
+	assert(rule.style.borderColor == nil and rule.style.borderImage == nil)
+	if gameStylesheetUtil then
+		assert(rule.levels[1].id == "menu.gamebar")
+		assert(rule.levels[#rule.levels].element == "TextView")
 	end
 end
 
@@ -247,122 +241,49 @@ local function matchesRootClasses(rule, classes)
 	end
 	return true
 end
-for _, included in ipairs({ false, true }) do
-	local vanilla = defaultSelection()
-	vanilla.gameBarIncludeBulldozer = included
-	for _, rule in ipairs(rules) do
-		assert(not matchesRootClasses(rule, settings.styleClasses(vanilla)), "Vanilla settings change existing styling")
-	end
+local vanillaClasses = settings.textStyleClasses(settings.VANILLA_CHOICE_ID)
+for _, rule in ipairs(rules) do
+	assert(not matchesRootClasses(rule, vanillaClasses), "Vanilla text settings change existing styling")
 end
-local suffixes = {
-	normal = "!unchecked",
-	selected = "!checked",
-	idleHover = "!unchecked:hover",
-	selectedHover = "!checked:hover",
-	disabled = ":disabled",
-}
+local colorCaseCount = 0
 for _, option in ipairs(settings.buttonColors) do
 	for _, choice in ipairs(option.choices) do
-		if choice.gray ~= nil then
-			for _, contrast in ipairs(settings.stateContrast.choices) do
-				local configured = defaultSelection()
-				configured[option.stateKey] = choice.id
-				configured.gameBarStateContrast = contrast.id
-				local classes = settings.styleClasses(configured)
-				local uniqueClasses = {}
-				for _, className in ipairs(classes) do
-					assert(not uniqueClasses[className], "Duplicate style class")
-					uniqueClasses[className] = true
+		for _, contrast in ipairs(settings.stateContrast.choices) do
+			local offsets = {
+				normal = 0,
+				selected = contrast.selectedOffset,
+				idleHover = contrast.hoverOffset,
+				selectedHover = contrast.selectedHoverOffset,
+			}
+			for _, state in ipairs(settings.colorStates) do
+				local actual = settings.colorGray(option, choice.id, contrast.id, state.id)
+				if choice.gray == nil then
+					assert(actual == nil, "Vanilla/None acquired a state colour")
+				else
+					local expected = state.id == "disabled" and choice.gray * contrast.disabledScale
+						or choice.gray + assert(offsets[state.id], "Unknown colour state")
+					expected = math.max(0, math.min(255, expected))
+					assert(math.abs(actual - expected) < 1e-12, "Wrong state colour for " .. state.id)
 				end
-				for _, state in ipairs(settings.colorStates) do
-					local found
-					for _, rule in ipairs(rules) do
-						if
-							rule.selector:sub(-#(target .. suffixes[state.id] .. option.child))
-								== target .. suffixes[state.id] .. option.child
-							and matchesRootClasses(rule, classes)
-							and rule.style[option.property]
-						then
-							assert(found == nil, "Multiple colour rules match one state")
-							found = rule
-						end
-					end
-					assert(
-						found,
-						"Missing colour state "
-							.. option.key
-							.. "/"
-							.. choice.id
-							.. "/"
-							.. contrast.id
-							.. "/"
-							.. state.id
-					)
-					local expected = choice.gray
-					if state.offsetKey then
-						expected = expected + contrast[state.offsetKey]
-					end
-					if state.scaleKey then
-						expected = expected * contrast[state.scaleKey]
-					end
-					expected = math.max(0, math.min(255, expected)) / 255
-					local color = found.style[option.property]
-					for channel = 1, 3 do
-						assert(math.abs(color[channel] - expected) < 1e-12)
-					end
-					assert(color[4] == 1)
-					for _, other in ipairs(settings.buttonColors) do
-						if other ~= option then
-							assert(found.style[other.property] == nil, "Colour setting changes another property")
-						end
-					end
-					if option == settings.border then
-						assert(found.style.borderImage.fileName == "::/gui/main/design/disk_mini_contour.tga")
-					end
-					if gameStylesheetUtil then
-						assert(#found.levels == (option == settings.icon and 3 or 2))
-						assert(found.levels[1].id == "menu.gamebar")
-						assert(found.levels[2].classList[1] == settings.BUTTON_STYLE_CLASS)
-						if state.id == "disabled" then
-							assert(found.levels[2].pseudoClassList[1] == "disabled")
-						else
-							assert(
-								found.levels[2].classList[2]
-									== ((state.id == "normal" or state.id == "idleHover") and "unchecked" or "checked")
-							)
-						end
-						if state.id == "idleHover" or state.id == "selectedHover" then
-							assert(found.levels[2].pseudoClassList[1] == "hover")
-						end
-						if option == settings.icon then
-							assert(found.levels[3].element == "ImageView")
-							assert(#found.levels[3].pseudoClassList == 0)
-						end
-					end
-				end
+				colorCaseCount = colorCaseCount + 1
 			end
 		end
 	end
 end
-local borderless = assert(bySelector[root .. "!" .. settings.styleClass(settings.border, "none") .. target])
-assert(borderless.style.borderImage.fileName == "")
-for channel = 1, 4 do
-	assert(borderless.style.borderColor[channel] == defaultColors.Invisible[channel])
-end
-for _, option in ipairs({ settings.strip, settings.text }) do
-	for _, choice in ipairs(option.choices) do
-		if choice.gray ~= nil then
-			local prefix = root .. "!" .. settings.styleClass(option, choice.id)
-			local selectors = option == settings.strip and { prefix .. " R::GameBarBackground !bottom" }
-				or {
-					prefix .. " R::GameBarMenuMiddle R::GameBarInfoDisplay R::GameBarEarningsPlugin TextView",
-					prefix .. " R::GameBarMenuMiddle R::GameBarInfoDisplay R::GameBarTransportedPlugin TextView",
-				}
-			for _, selector in ipairs(selectors) do
-				local rule = assert(bySelector[selector])
-				local color = rule.style[option == settings.strip and "backgroundColor" or "color"]
-				assert(math.abs(color[1] - choice.gray / 255) < 1e-12)
+for _, choice in ipairs(settings.text.choices) do
+	local classes = settings.textStyleClasses(choice.id)
+	assert(classes[1] == settings.GAME_BAR_STYLE_CLASS and classes[2] == choice.styleClass)
+	assert(#classes == (choice.gray == nil and 2 or 3))
+	if choice.gray ~= nil then
+		assert(classes[3] == settings.text.overrideClass)
+		local prefix = root .. "!" .. choice.styleClass
+		for _, recipe in ipairs({ "GameBarEarningsPlugin", "GameBarTransportedPlugin" }) do
+			local selector = prefix .. " R::GameBarMenuMiddle R::GameBarInfoDisplay R::" .. recipe .. " TextView"
+			local color = assert(bySelector[selector]).style.color
+			for channel = 1, 3 do
+				assert(math.abs(color[channel] - choice.gray / 255) < 1e-12)
 			end
+			assert(color[4] == 1)
 		end
 	end
 end
@@ -379,3 +300,4 @@ if gameStylesheetUtil then
 	print("TpF3 stylesheet parser test passed (" .. #rules .. " compiled rules)")
 end
 print("Dark UI settings test passed (" .. #rules .. " rules)")
+print("Dark UI state colour test passed (" .. colorCaseCount .. " cases)")

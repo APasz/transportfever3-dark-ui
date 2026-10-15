@@ -14,6 +14,7 @@ lua tests/settings_ui_test.lua
 if [[ $# -gt 0 ]]; then
     lua tests/settings_test.lua "$1"
     lua tests/palette_test.lua "$1"
+    lua tests/inline_styles_test.lua "$1"
 else
     printf 'Game-source checks skipped; pass the TpF3 install directory to enable them.\n'
 fi

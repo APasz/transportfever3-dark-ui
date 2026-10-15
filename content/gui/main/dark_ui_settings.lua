@@ -9,7 +9,6 @@ settings.RESOURCE_TYPE = uiTweaks.RESOURCE_TYPE
 settings.VANILLA_CHOICE_ID = "vanilla"
 settings.NONE_CHOICE_ID = "none"
 settings.GAME_BAR_STYLE_CLASS = "dark-ui-game-bar"
-settings.BUTTON_STYLE_CLASS = "dark-ui-game-bar-button"
 
 local GRAY_LEVELS = {
 	{ id = "black", gray = 0, name = "Black" },
@@ -41,48 +40,35 @@ end
 
 settings.background = {
 	key = "game_bar_background_color",
-	stateKey = "gameBarBackgroundColor",
-	classPrefix = "dark-ui-background-",
-	overrideClass = "dark-ui-override-background",
 	label = "Game bar background",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
 	choices = makeColorChoices(false),
-	property = "backgroundColor1",
-	child = "",
+	stateful = true,
 }
 
 settings.border = {
 	key = "game_bar_border_color",
-	stateKey = "gameBarBorderColor",
-	classPrefix = "dark-ui-border-",
-	overrideClass = "dark-ui-override-border",
 	label = "Game bar border",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
 	description = "None forcibly removes the ring; Vanilla preserves the game's border styling.",
 	choices = makeColorChoices(true),
-	property = "borderColor",
-	child = "",
+	stateful = true,
+	imageFile = "::/gui/main/design/disk_mini_contour.tga",
 }
 
 settings.icon = {
 	key = "game_bar_icon_color",
-	stateKey = "gameBarIconColor",
-	classPrefix = "dark-ui-icon-",
-	overrideClass = "dark-ui-override-icon",
 	label = "Game bar icons",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
 	choices = makeColorChoices(false),
-	property = "color",
-	child = " ImageView",
+	stateful = true,
 }
 
 settings.strip = {
 	key = "game_bar_strip_color",
-	stateKey = "gameBarStripColor",
-	classPrefix = "dark-ui-strip-",
 	label = "Game bar strip",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
@@ -91,7 +77,6 @@ settings.strip = {
 
 settings.text = {
 	key = "game_bar_text_color",
-	stateKey = "gameBarTextColor",
 	classPrefix = "dark-ui-text-",
 	overrideClass = "dark-ui-override-text",
 	label = "Built-in game bar info text",
@@ -103,8 +88,6 @@ settings.text = {
 
 settings.stateContrast = {
 	key = "game_bar_state_contrast",
-	stateKey = "gameBarStateContrast",
-	classPrefix = "dark-ui-state-contrast-",
 	label = "Game bar state contrast",
 	description = "Controls the difference between normal, selected, hovered, and disabled button colours.",
 	kind = "dropdown",
@@ -139,7 +122,6 @@ settings.stateContrast = {
 
 settings.includeBulldozer = {
 	key = "game_bar_include_bulldozer",
-	stateKey = "gameBarIncludeBulldozer",
 	label = "Include bulldozer buttons",
 	description = "Apply game bar button colours to both bulldozers; off preserves their existing styling.",
 	kind = "toggle",
@@ -159,38 +141,36 @@ settings.options = {
 settings.buttonColors = {}
 local colorOptions = {}
 settings.colorStates = {
-	{ id = "normal", selector = "!unchecked" },
-	{ id = "selected", selector = "!checked", offsetKey = "selectedOffset" },
-	{ id = "idleHover", selector = "!unchecked:hover", offsetKey = "hoverOffset" },
-	{ id = "selectedHover", selector = "!checked:hover", offsetKey = "selectedHoverOffset" },
-	{ id = "disabled", selector = ":disabled", scaleKey = "disabledScale" },
+	{ id = "normal" },
+	{ id = "selected", offsetKey = "selectedOffset" },
+	{ id = "idleHover", offsetKey = "hoverOffset" },
+	{ id = "selectedHover", offsetKey = "selectedHoverOffset" },
+	{ id = "disabled", scaleKey = "disabledScale" },
 }
 
 local settingKeys = {}
 local choicesByOption = {}
-local stateKeys = {}
 local classPrefixes = {}
 for _, option in ipairs(settings.options) do
 	assert(type(option.key) == "string" and option.key ~= "", "Dark UI setting key is required")
-	assert(type(option.stateKey) == "string" and option.stateKey ~= "", "Dark UI setting state key is required")
 	assert(settingKeys[option.key] == nil, "Dark UI has duplicate setting key " .. option.key)
-	assert(stateKeys[option.stateKey] == nil, "Dark UI has duplicate setting state key " .. option.stateKey)
 	settingKeys[option.key] = true
-	stateKeys[option.stateKey] = true
 	if option.kind == "toggle" then
 		assert(type(option.default) == "boolean", "Dark UI toggle default must be a boolean")
 		choicesByOption[option] = {}
 	else
 		assert(option.kind == "dropdown", "Unsupported Dark UI option kind " .. tostring(option.kind))
-		assert(
-			type(option.classPrefix) == "string" and option.classPrefix ~= "",
-			"Dark UI setting class prefix is required"
-		)
-		assert(
-			classPrefixes[option.classPrefix] == nil,
-			"Dark UI has duplicate setting class prefix " .. option.classPrefix
-		)
-		classPrefixes[option.classPrefix] = true
+		if option.classPrefix ~= nil then
+			assert(
+				type(option.classPrefix) == "string" and option.classPrefix ~= "",
+				"Dark UI setting class prefix is required"
+			)
+			assert(
+				classPrefixes[option.classPrefix] == nil,
+				"Dark UI has duplicate setting class prefix " .. option.classPrefix
+			)
+			classPrefixes[option.classPrefix] = true
+		end
 		assert(type(option.choices) == "table", "Dark UI dropdown " .. option.key .. " has no choices")
 		local choicesById = {}
 		local cssChoiceIds = {}
@@ -201,14 +181,16 @@ for _, option in ipairs(settings.options) do
 				"Dark UI choice label is required for " .. option.key
 			)
 			assert(choicesById[choice.id] == nil, "Dark UI has duplicate choice " .. choice.id .. " for " .. option.key)
-			local cssChoiceId = choice.id:gsub("[^a-z0-9-]", "-")
-			assert(
-				cssChoiceIds[cssChoiceId] == nil,
-				"Dark UI has colliding CSS choice ids for " .. option.key .. ": " .. choice.id
-			)
-			choice.styleClass = option.classPrefix .. cssChoiceId
+			if option.classPrefix ~= nil then
+				local cssChoiceId = choice.id:gsub("[^a-z0-9-]", "-")
+				assert(
+					cssChoiceIds[cssChoiceId] == nil,
+					"Dark UI has colliding CSS choice ids for " .. option.key .. ": " .. choice.id
+				)
+				choice.styleClass = option.classPrefix .. cssChoiceId
+				cssChoiceIds[cssChoiceId] = true
+			end
 			choicesById[choice.id] = choice
-			cssChoiceIds[cssChoiceId] = true
 			if choice.gray ~= nil then
 				assert(
 					type(choice.gray) == "number" and choice.gray >= 0 and choice.gray <= 255,
@@ -219,8 +201,8 @@ for _, option in ipairs(settings.options) do
 		end
 		assert(choicesById[option.default] ~= nil, "Dark UI has an invalid default for " .. option.key)
 		choicesByOption[option] = choicesById
-		if option.property ~= nil then
-			assert(colorOptions[option] and type(option.child) == "string", "Invalid Dark UI button colour option")
+		if option.stateful then
+			assert(colorOptions[option], "Invalid Dark UI button colour option")
 			settings.buttonColors[#settings.buttonColors + 1] = option
 		end
 	end
@@ -269,11 +251,20 @@ local function validateChoice(option, choiceId)
 	error("Dark UI has an invalid " .. option.key .. ": " .. tostring(choiceId), 3)
 end
 
-function settings.styleClass(option, choiceId)
-	return validateChoice(option, choiceId).styleClass
+local colorStatesById = {}
+for _, state in ipairs(settings.colorStates) do
+	colorStatesById[state.id] = state
 end
 
-local function stateGray(gray, state, contrast)
+function settings.colorGray(option, choiceId, contrastId, stateId)
+	local choice = validateChoice(option, choiceId)
+	assert(option.stateful == true, "Dark UI state colours require a button colour option")
+	local contrast = validateChoice(settings.stateContrast, contrastId)
+	local state = assert(colorStatesById[stateId], "Invalid Dark UI colour state " .. tostring(stateId))
+	if choice.gray == nil then
+		return nil
+	end
+	local gray = choice.gray
 	if state.scaleKey then
 		gray = gray * assert(contrast[state.scaleKey], "Missing state contrast scale " .. state.scaleKey)
 	elseif state.offsetKey then
@@ -282,78 +273,13 @@ local function stateGray(gray, state, contrast)
 	return math.max(0, math.min(255, gray))
 end
 
-local colorRulesByOption = {}
-local colorClassesByOption = {}
-for _, option in ipairs(settings.buttonColors) do
-	local rules = {}
-	local classesByChoice = {}
-	local seenClasses = {}
-	for _, choice in ipairs(option.choices) do
-		if choice.gray ~= nil then
-			local classesByContrast = {}
-			for _, contrast in ipairs(settings.stateContrast.choices) do
-				local classes = {}
-				for _, state in ipairs(settings.colorStates) do
-					local value = stateGray(choice.gray, state, contrast)
-					local className = option.classPrefix
-						.. state.id
-						.. "-"
-						.. string.format("%.3f", value):gsub("%.", "-")
-					classes[#classes + 1] = className
-					if not seenClasses[className] then
-						rules[#rules + 1] = { state = state, gray = value, className = className }
-						seenClasses[className] = true
-					end
-				end
-				classesByContrast[contrast.id] = classes
-			end
-			classesByChoice[choice.id] = classesByContrast
-		end
-	end
-	colorRulesByOption[option] = rules
-	colorClassesByOption[option] = classesByChoice
-end
-
-function settings.colorRules(option)
-	return assert(colorRulesByOption[option], "Dark UI colour option is not registered")
-end
-
-function settings.styleClasses(selected, scopeClass)
-	assert(type(selected) == "table", "Dark UI settings must be a table")
-	if scopeClass == nil then
-		scopeClass = settings.GAME_BAR_STYLE_CLASS
-	end
-	assert(type(scopeClass) == "string" and scopeClass ~= "", "Dark UI style scope class is required")
-	settings.validate(selected)
-	local classes = { scopeClass }
-	for _, option in ipairs(settings.options) do
-		local choiceId = selected[option.stateKey]
-		if option.kind == "dropdown" then
-			classes[#classes + 1] = settings.styleClass(option, choiceId)
-			if option.overrideClass ~= nil and choiceId ~= settings.VANILLA_CHOICE_ID then
-				classes[#classes + 1] = option.overrideClass
-			end
-			local colorClasses = colorClassesByOption[option]
-			local byContrast = colorClasses and colorClasses[choiceId]
-			if byContrast then
-				for _, className in ipairs(byContrast[selected[settings.stateContrast.stateKey]]) do
-					classes[#classes + 1] = className
-				end
-			end
-		end
+function settings.textStyleClasses(choiceId)
+	local choice = validateChoice(settings.text, choiceId)
+	local classes = { settings.GAME_BAR_STYLE_CLASS, choice.styleClass }
+	if choiceId ~= settings.VANILLA_CHOICE_ID then
+		classes[#classes + 1] = settings.text.overrideClass
 	end
 	return classes
-end
-
-function settings.validate(selected)
-	assert(type(selected) == "table", "Dark UI settings must be a table")
-	for _, option in ipairs(settings.options) do
-		if option.kind == "toggle" then
-			assert(type(selected[option.stateKey]) == "boolean", "Dark UI " .. option.key .. " must be a boolean")
-		else
-			validateChoice(option, selected[option.stateKey])
-		end
-	end
 end
 
 local LEGACY_BULLDOZER_CHOICES = {

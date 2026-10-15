@@ -1,5 +1,11 @@
 local guiUtil = {}
 
+function guiUtil.grayColor(gray)
+	assert(type(gray) == "number" and gray >= 0 and gray <= 255, "Dark UI grey must be between 0 and 255")
+	local channel = gray / 255
+	return { channel, channel, channel, 1 }
+end
+
 function guiUtil.validateAlpha(alpha, name)
 	assert(
 		type(alpha) == "number" and alpha >= 0 and alpha <= 1,
