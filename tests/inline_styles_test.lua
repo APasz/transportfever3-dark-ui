@@ -41,14 +41,33 @@ local styleAllocations = 0
 local nativeImages = setmetatable({}, { __mode = "k" })
 local imageAllocations = 0
 local imageConstructor = nativeConstructor({ fileName = true })
-local styleConstructor = nativeConstructor(
-	{ backgroundColor = true, backgroundColor1 = true, borderColor = true, borderImage = true, color = true },
-	{
-		borderImage = function(value)
-			assert(nativeImages[value], "Border image must be a native NinePatch")
-		end,
-	}
-)
+local styleFields = {
+	backgroundColor = true,
+	backgroundColor1 = true,
+	backgroundColor2 = true,
+	backgroundImage1 = true,
+	backgroundImage2 = true,
+	borderWidth = true,
+	borderColor = true,
+	color = true,
+	size = true,
+	padding = true,
+	fontSize = true,
+	borderImage = true,
+	anchorPoint = true,
+}
+local styleConstructor = nativeConstructor(styleFields, {
+	borderImage = function(value)
+		assert(nativeImages[value], "Border image must be a native NinePatch")
+	end,
+})
+local newStyle = styleConstructor.new
+styleConstructor.new = function()
+	local style = newStyle()
+	-- Native fields may return defaults even when the sheet never explicitly set them.
+	getmetatable(style).__index = { fontSize = -1 }
+	return style
+end
 local defaultColors = { Invisible = { 0.1, 0.2, 0.3, 0 } }
 local uiTweaksAvailable = true
 local recipeIds = {}
@@ -192,7 +211,36 @@ local builtin = {
 	ToolButton = shippedToolButton,
 	ToggleButton = react.RegisterRecipe("ToggleButton", function() end),
 }
-local gameBar = { GameBar = react.RegisterRecipe("GameBar", function() end) }
+local toolbarPlugins, toolbarPluginBodies, toolbarRecipes = {}, {}, {}
+for _, name in ipairs({ "ModToolbarStyleFixture", "ModToolbarIconProbe", "NonImageToolbarProbe", "SiblingIconProbe" }) do
+	local recipe = react.RegisterRecipe(name, function(...)
+		return assert(toolbarPluginBodies[name], "Missing toolbar plugin fixture")(...)
+	end)
+	toolbarRecipes[name] = recipe
+	toolbarPlugins[#toolbarPlugins + 1] = { recipe = recipe }
+end
+local modButtonArea = { MainModButtonAreaExtension = {} }
+react.getPlugins = function(extension)
+	assert(extension == modButtonArea.MainModButtonAreaExtension)
+	return toolbarPlugins
+end
+local gameBarBody = function() end
+local gameBar = { GameBar = react.RegisterRecipe("GameBar", function(...)
+	return gameBarBody(...)
+end) }
+local toolbarReplacement = react.RegisterRecipe("ModToolbarStyleReplacement", function(...)
+	return toolbarPluginBodies.ModToolbarStyleFixture(...)
+end)
+_react.recipeReplace[react.GetRecipeId(toolbarRecipes.ModToolbarStyleFixture)] = toolbarReplacement
+local guiUtil = package.loaded[GUI_UTIL_MODULE]
+local shippedMergeStyleSheet = guiUtil.mergeStyleSheet
+local mergedStyleCount = 0
+guiUtil.mergeStyleSheet = function(base, overlay)
+	if base ~= nil and #overlay.propertyNames > 0 then
+		mergedStyleCount = mergedStyleCount + 1
+	end
+	return shippedMergeStyleSheet(base, overlay)
+end
 ug_require = function(path)
 	if path == "::/gui/main/react.lua" then
 		return react
@@ -202,6 +250,9 @@ ug_require = function(path)
 	end
 	if path == "::/gui/main/styleutil.tl" then
 		return styleutil
+	end
+	if path == "::/gui/main/main_mod_button_area.tl" then
+		return modButtonArea
 	end
 	assert(path == "::/gui/game_bar/game_bar.tl", "Unexpected runtime dependency " .. path)
 	return gameBar
@@ -304,6 +355,9 @@ local function setInputActionConfig(internals, action, config)
 end
 local function newContext()
 	local context = { states = {}, handlers = {}, nodes = {}, stateCursor = 0, steps = {}, internals = {} }
+	function context:getCurrentRecipeId()
+		return self.recipeId
+	end
 	function context:getCurrentRecipeName()
 		return self.recipeName
 	end
@@ -389,6 +443,7 @@ local function newContext()
 	end
 	function context:renderProps(recipeId, props, name)
 		self.recipeName = name
+		self.recipeId = recipeId
 		self.stateCursor = 0
 		self.handlers = {}
 		self.nodes = {}
@@ -589,7 +644,7 @@ for _ = 1, 2 do
 		end
 	end
 end
-assert(styleAllocations == initialStyleCount)
+assert(styleAllocations == initialStyleCount + mergedStyleCount)
 
 selectedChoice = "black"
 context:dispatch("another.mod", settings.strip.key, selectedChoice)
@@ -622,10 +677,41 @@ local otherParams = { meta = { id = "another.mod.bottom", class = "bottom" } }
 assert(unrelatedContext:render(background, otherParams).styleSheet == nil, "Inline styling changed another component")
 assert(#unrelatedContext.states == 0)
 
-local foreignStyle = { existingStyle = true }
+local foreignStyle = styleConstructor.new()
+local originalForeignFields = {}
+local foreignImage = imageConstructor.new()
+foreignImage.fileName = "mod-image.tga"
+nativeImages[foreignImage] = true
+for name in pairs(styleFields) do
+	if name:find("Image", 1, true) then
+		foreignStyle[name] = foreignImage
+	elseif name == "fontSize" then
+		foreignStyle[name] = 17
+	else
+		foreignStyle[name] = { x = 0.1, y = 0.2, z = 0.3, w = 0.4 }
+	end
+	originalForeignFields[name] = foreignStyle[name]
+end
+local function assertMergedStyle(actual, overrides)
+	assert(actual ~= foreignStyle, "Dark UI mutated the supplied sheet")
+	for name in pairs(styleFields) do
+		assert(foreignStyle[name] == originalForeignFields[name], "Style merging mutated the source's " .. name)
+		local expected = overrides[name]
+		if expected == nil then
+			expected = foreignStyle[name]
+		end
+		assert(actual[name] == expected, "Style merging lost or replaced " .. name)
+	end
+end
 local foreignParams = { meta = { id = params.meta.id, styleSheet = foreignStyle } }
-local mergeOk, mergeError = pcall(context.render, context, background, foreignParams)
-assert(not mergeOk and mergeError:find("cannot merge an existing inline stylesheet", 1, true))
+local mergedStrip = context:render(background, foreignParams).styleSheet
+assertMergedStyle(mergedStrip, { backgroundColor = mergedStrip.backgroundColor })
+assert(mergedStrip.backgroundColor.x == 0)
+foreignStyle.padding = { x = 9, y = 8, z = 7, w = 6 }
+originalForeignFields.padding = foreignStyle.padding
+local updatedStrip = context:render(background, foreignParams).styleSheet
+assertMergedStyle(updatedStrip, { backgroundColor = updatedStrip.backgroundColor })
+assert(updatedStrip.padding ~= mergedStrip.padding, "In-place source changes were cached away")
 context:dispatch(settings.SECTION_ID, settings.strip.key, settings.VANILLA_CHOICE_ID)
 assert(
 	context:render(background, foreignParams).styleSheet == foreignStyle,
@@ -640,19 +726,25 @@ theme.install({
 		error("Strip styling installed twice")
 	end,
 })
-assert(_react.recipeReplace[componentId] == componentReplacement and styleAllocations == initialStyleCount)
+assert(
+	_react.recipeReplace[componentId] == componentReplacement
+		and styleAllocations == initialStyleCount + mergedStyleCount
+)
 uiTweaksAvailable = false
 loadTheme().install({
 	ReplaceRecipe = function()
 		error("Inline styling installed without UI Tweaks")
 	end,
 })
-assert(_react.recipeReplace[componentId] == componentReplacement and styleAllocations == initialStyleCount)
+assert(
+	_react.recipeReplace[componentId] == componentReplacement
+		and styleAllocations == initialStyleCount + mergedStyleCount
+)
 print("Dark UI inline strip React bridge test passed (shipped React/styleutil; native rendering not tested)")
 
 uiTweaksAvailable = true
 local function buttonParent(name, recipe, makeContent)
-	return react.RegisterRecipe(name, function(...)
+	local function body(...)
 		local arguments = table.pack(...)
 		local params = arguments[arguments.n]
 		local configured = {}
@@ -663,7 +755,16 @@ local function buttonParent(name, recipe, makeContent)
 			or (makeContent and makeContent() or builtin.ImageView({ path = "test-icon.tga" }))
 		arguments[arguments.n] = configured
 		return recipe(table.unpack(arguments, 1, arguments.n))
-	end)
+	end
+	if name == "GameBar" then
+		gameBarBody = body
+		return gameBar.GameBar
+	end
+	if toolbarRecipes[name] ~= nil then
+		toolbarPluginBodies[name] = body
+		return toolbarRecipes[name]
+	end
+	return react.RegisterRecipe(name, body)
 end
 local toolParent = buttonParent("ManagerToolButton", builtin.ToolButton)
 local toggleParent = buttonParent("NodeEditorButton", builtin.ToggleButton)
@@ -847,16 +948,38 @@ assert(nativeReferenceArgument.data == nativeReference, "Styling mutated the ori
 
 local extraParent = buttonParent("ModToolbarStyleFixture", builtin.ToggleButton)
 local extraStyle = react.style({ class = "extra,third-party" })
-for _, prefix in ipairs({ { extraStyle, nativeReferenceArgument }, { nativeReferenceArgument, extraStyle } }) do
-	local extraContext = newContext()
-	local extraParams = buttonParams()
-	extraParams.value = 0
-	local meta = extraContext:render(extraParent, prefix[1], prefix[2], extraParams)
-	assertBackground(meta, settings.colorGray(settings.background, selectedBackground, selectedContrast, "normal"))
-	local node = extraContext.nodesById[nativeReference:get().nodeId]
-	assert(node.recipeId == react.GetRecipeId(builtin.ToggleButton) and node.props.style.class == extraStyle.data.class)
-	assert(extraParams.meta.class == nil, "Styling mutated incoming button classes")
+local gameBarParent = buttonParent("GameBar", builtin.ToggleButton)
+for _, parent in ipairs({ extraParent, toolbarReplacement, gameBarParent }) do
+	for _, prefix in ipairs({ { extraStyle, nativeReferenceArgument }, { nativeReferenceArgument, extraStyle } }) do
+		local extraContext = newContext()
+		local extraParams = buttonParams()
+		extraParams.value = 0
+		local meta = extraContext:render(parent, prefix[1], prefix[2], extraParams)
+		assertBackground(meta, settings.colorGray(settings.background, selectedBackground, selectedContrast, "normal"))
+		local node = extraContext.nodesById[nativeReference:get().nodeId]
+		assert(
+			node.recipeId == react.GetRecipeId(builtin.ToggleButton) and node.props.style.class == extraStyle.data.class
+		)
+		assert(extraParams.meta.class == nil, "Styling mutated incoming button classes")
+	end
 end
+local outsideToolbar = buttonParent("UnrelatedModWindow", builtin.ToggleButton)
+for _, prefix in ipairs({ { extraStyle, nativeReferenceArgument }, { nativeReferenceArgument, extraStyle } }) do
+	local outsideContext = newContext()
+	local outsideParams = buttonParams()
+	assert(outsideContext:render(outsideToolbar, prefix[1], prefix[2], outsideParams).styleSheet == nil)
+	assert(#outsideContext.states == 0, "Toolbar hooks leaked into an unrelated extra button")
+	outsideParams.meta.class = "extra"
+	assert(outsideContext:render(outsideToolbar, outsideParams).styleSheet == nil)
+end
+for _, class in ipairs({ "third-party", "extraordinary" }) do
+	local unstyledContext = newContext()
+	local unstyledParams = buttonParams()
+	unstyledParams.meta.class = class
+	assert(unstyledContext:render(extraParent, unstyledParams).styleSheet == nil)
+	assert(#unstyledContext.states == 0, "A toolbar plugin button without the extra class was styled")
+end
+print("Dark UI toolbar targeting test passed (GameBar, registered plugins/replacements, unrelated extra buttons)")
 
 for _, field in ipairs({ "value", "initialValue" }) do
 	local invalidParams = buttonParams()
@@ -986,13 +1109,16 @@ for _, missingStack in ipairs({
 end
 
 for _, button in ipairs(buttons) do
+	button:change(settings.background, "gray")
+	local expectedBackground = button:render().styleSheet.backgroundColor1
 	button:change(settings.background, settings.VANILLA_CHOICE_ID)
 	assert(button:render().styleSheet == vanillaStyle, "Returning to Vanilla did not clear a button background")
 	button.params.meta.styleSheet = foreignStyle
 	assert(button:render().styleSheet == foreignStyle)
 	button:change(settings.background, "gray")
-	local ok, message = pcall(button.render, button)
-	assert(not ok and message:find("cannot merge an existing inline stylesheet", 1, true))
+	local merged = button:render().styleSheet
+	assertMergedStyle(merged, { backgroundColor1 = merged.backgroundColor1 })
+	assert(merged.backgroundColor1 == expectedBackground)
 	button.params.meta.styleSheet = nil
 end
 
@@ -1021,7 +1147,7 @@ for _ in pairs(cachedBackgrounds) do
 	distinctBackgrounds = distinctBackgrounds + 1
 end
 assert(
-	styleAllocations == initialStyleCount + distinctBackgrounds,
+	styleAllocations == initialStyleCount + distinctBackgrounds + mergedStyleCount,
 	"Inline background cache grew beyond the used colours"
 )
 print(
@@ -1161,7 +1287,9 @@ for _, button in ipairs(buttons) do
 	end
 	button:change(settings.background, "vanilla")
 	button.params.meta.styleSheet = foreignStyle
-	assert(not pcall(button.render, button), "Border-only override replaced a third-party inline style")
+	local merged = button:render().styleSheet
+	assertMergedStyle(merged, { borderColor = merged.borderColor, borderImage = merged.borderImage })
+	assert(merged.borderImage.fileName == "" and merged.borderColor.w == 0)
 	button:change(settings.border, "vanilla")
 	assert(button:render().styleSheet == foreignStyle, "Vanilla choices replaced a third-party inline style")
 	button.params.meta.styleSheet = nil
@@ -1238,8 +1366,11 @@ end
 
 imageParams.meta.styleSheet = foreignStyle
 metadataButton:change(settings.icon, "gray")
-local iconMergeOk, iconMergeError = pcall(metadataButton.render, metadataButton)
-assert(not iconMergeOk and iconMergeError:find("cannot merge an existing inline stylesheet", 1, true))
+metadataButton:render()
+local mergedIcon =
+	metadataButton.parent.nodesById[metadataButton.nativeNode.props.props[1].content].props.props[1].styleSheet
+assertMergedStyle(mergedIcon, { color = mergedIcon.color })
+assert(mergedIcon.color.x == settings.colorGray(settings.icon, "gray", selectedContrast, "normal") / 255)
 metadataButton:change(settings.icon, "vanilla")
 metadataButton:render()
 assert(metadataButton.parent.nodes[2].props.props[1].styleSheet == foreignStyle, "Vanilla replaced a mod icon style")
@@ -1352,12 +1483,34 @@ retainedStrip = applyNativeStyle(retainedStrip, resetStrip:render(background, pa
 assert(retainedStrip == vanillaStyle and next(retainedStrip) == nil, "Reset retained the native strip style")
 print("Dark UI retained native-style reset test passed (buttons, icons, strip, partial reset, bulldozer exclusion)")
 
+selectedBackground, selectedBorder, selectedIcon = "black", "none", "vanilla"
+for _, parent in ipairs({ toolParent, toggleParent }) do
+	local modParams = buttonParams()
+	modParams.meta.styleSheet = foreignStyle
+	modParams.value = parent == toggleParent and 0 or nil
+	local modButton = newButton(parent, modParams, parent == toolParent)
+	local merged = applyNativeStyle(nil, modButton:render())
+	assertMergedStyle(merged, {
+		backgroundColor1 = merged.backgroundColor1,
+		borderColor = merged.borderColor,
+		borderImage = merged.borderImage,
+	})
+	assert(merged.backgroundColor1.x == 0 and merged.borderColor.w == 0 and merged.borderImage.fileName == "")
+	modButton:change(settings.background, "vanilla")
+	merged = applyNativeStyle(merged, modButton:render())
+	assertMergedStyle(merged, { borderColor = merged.borderColor, borderImage = merged.borderImage })
+	assert(merged.backgroundColor1 == foreignStyle.backgroundColor1, "Partial reset lost the mod's background")
+	modButton:change(settings.border, "vanilla")
+	assert(applyNativeStyle(merged, modButton:render()) == foreignStyle, "Reset did not restore the original mod sheet")
+end
+print("Dark UI mod stylesheet compatibility test passed (13 native fields, source mutation, partial/full reset)")
+
 local uniqueIconStyles = 0
 for _ in pairs(cachedIconStyles) do
 	uniqueIconStyles = uniqueIconStyles + 1
 end
 assert(
-	styleAllocations == initialStyleCount + uniqueCombinedStyles + uniqueIconStyles,
+	styleAllocations == initialStyleCount + uniqueCombinedStyles + uniqueIconStyles + mergedStyleCount,
 	"Combined style cache grew beyond distinct output styles"
 )
 assert(imageAllocations == 2, "Border images were recreated during colour changes")

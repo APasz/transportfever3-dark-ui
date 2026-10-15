@@ -163,6 +163,9 @@ local recipeIds = {
 	[existingGameBar] = EXISTING_GAME_BAR_RECIPE_ID,
 }
 local react = {
+	getPlugins = function()
+		return {}
+	end,
 	GetRecipeId = function(recipe)
 		return recipeIds[recipe]
 	end,
@@ -223,6 +226,9 @@ ug_require = function(path)
 				return colors
 			end,
 		}
+	end
+	if path == "::/gui/main/main_mod_button_area.tl" then
+		return { MainModButtonAreaExtension = {} }
 	end
 	if path == "::/gui/game_bar/game_bar.tl" then
 		return { GameBar = originalGameBar }

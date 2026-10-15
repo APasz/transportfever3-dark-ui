@@ -1,5 +1,43 @@
 local guiUtil = {}
 
+-- Documented api.gui.StyleSheet fields; native userdata cannot be iterated with pairs().
+local styleSheetFields = {
+	"backgroundColor",
+	"backgroundColor1",
+	"backgroundColor2",
+	"backgroundImage1",
+	"backgroundImage2",
+	"borderWidth",
+	"borderColor",
+	"color",
+	"size",
+	"padding",
+	"fontSize",
+	"borderImage",
+	"anchorPoint",
+}
+
+function guiUtil.mergeStyleSheet(base, overlay)
+	if base == nil then
+		return overlay.styleSheet
+	end
+	if #overlay.propertyNames == 0 then
+		return base
+	end
+	-- Re-read the base: other mods can mutate a native sheet without changing its identity.
+	local merged = api.gui.StyleSheet.new()
+	for _, name in ipairs(styleSheetFields) do
+		local value = base[name]
+		if value ~= nil then
+			merged[name] = value
+		end
+	end
+	for _, name in ipairs(overlay.propertyNames) do
+		merged[name] = overlay.styleSheet[name]
+	end
+	return merged
+end
+
 function guiUtil.grayColor(gray)
 	assert(type(gray) == "number" and gray >= 0 and gray <= 255, "Dark UI grey must be between 0 and 255")
 	local channel = gray / 255

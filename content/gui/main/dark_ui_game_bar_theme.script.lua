@@ -25,6 +25,7 @@ local function install(replacementApi)
 	local guiUtil = require("apasz_dark_ui_1::/gui/main/dark_ui_gui_util.lua")
 	local styleutil = ug_require("::/gui/main/styleutil.tl")
 	local gameBar = ug_require("::/gui/game_bar/game_bar.tl")
+	local modButtonArea = ug_require("::/gui/main/main_mod_button_area.tl")
 	local unpackValues = assert(table.unpack or unpack, "Dark UI requires a Lua unpack function")
 	local toolButtonRecipes = {
 		ManagerToolButton = true,
@@ -35,6 +36,20 @@ local function install(replacementApi)
 		["menu.bulldozer"] = true,
 		["menu.moduleBulldozer"] = true,
 	}
+	-- There is no public ancestry lookup. Match toolbar recipe identities instead of a global CSS class.
+	local extraButtonRecipes = {}
+	local function includeExtraButtonRecipe(recipe)
+		local recipeId = react.GetRecipeId(recipe)
+		while recipeId ~= nil and not extraButtonRecipes[recipeId] do
+			extraButtonRecipes[recipeId] = true
+			local replacement = _react.recipeReplace[recipeId]
+			recipeId = replacement ~= nil and react.GetRecipeId(replacement) or nil
+		end
+	end
+	includeExtraButtonRecipe(gameBar.GameBar)
+	for _, plugin in ipairs(react.getPlugins(modButtonArea.MainModButtonAreaExtension)) do
+		includeExtraButtonRecipe(plugin.recipe)
+	end
 
 	local function shallowCopy(source)
 		local copy = {}
@@ -70,6 +85,18 @@ local function install(replacementApi)
 
 	-- Submit an empty sheet to clear overrides on reused native components.
 	local vanillaInlineStyle = api.gui.StyleSheet.new()
+	local vanillaOverlay = { styleSheet = vanillaInlineStyle, propertyNames = {} }
+	local function makeInlineOverlay(colors, borderImage)
+		local overlay = { styleSheet = styleutil.makeStyle(colors), propertyNames = {} }
+		for name in pairs(colors) do
+			overlay.propertyNames[#overlay.propertyNames + 1] = name
+		end
+		if borderImage ~= nil then
+			overlay.styleSheet.borderImage = borderImage
+			overlay.propertyNames[#overlay.propertyNames + 1] = "borderImage"
+		end
+		return overlay
+	end
 
 	local function makeInlineButtonStyleCache()
 		local function newBorderCache()
@@ -86,7 +113,7 @@ local function install(replacementApi)
 			guiUtil.validateColor(guiUtil.getResource(colorsResource).Invisible, colorsResource .. ".Invisible")
 		return function(backgroundGray, borderChoiceId, borderGray)
 			if backgroundGray == nil and borderChoiceId == settings.VANILLA_CHOICE_ID then
-				return vanillaInlineStyle
+				return vanillaOverlay
 			end
 			local cache = withoutBackground
 			if backgroundGray ~= nil then
@@ -113,10 +140,11 @@ local function install(replacementApi)
 				elseif borderGray ~= nil then
 					colors.borderColor = guiUtil.grayColor(borderGray)
 				end
-				style = styleutil.makeStyle(colors)
+				local selectedBorderImage
 				if borderChoiceId ~= settings.VANILLA_CHOICE_ID then
-					style.borderImage = borderChoiceId == settings.NONE_CHOICE_ID and noBorderImage or borderImage
+					selectedBorderImage = borderChoiceId == settings.NONE_CHOICE_ID and noBorderImage or borderImage
 				end
+				style = makeInlineOverlay(colors, selectedBorderImage)
 				borderCache[borderKey] = style
 			end
 			return style
@@ -125,16 +153,17 @@ local function install(replacementApi)
 
 	local function makeInlineIconStyler()
 		local stylesByGray = {}
+		local emptyMeta = {}
 		local imagesByContext = setmetatable({}, { __mode = "k" })
 		recipeComposition.interceptActive(builtin.ImageView, "ImageView", function(renderOriginal)
 			return function(...)
 				local context = react.getCallingRecipeCtx()
 				local images = imagesByContext[context]
 				if images == nil then
-					images = { hasInlineStyleByNode = {}, cleanupPending = false }
+					images = { metaByNode = {}, cleanupPending = false }
 					images.clear = function()
-						for node in pairs(images.hasInlineStyleByNode) do
-							images.hasInlineStyleByNode[node] = nil
+						for node in pairs(images.metaByNode) do
+							images.metaByNode[node] = nil
 						end
 						images.cleanupPending = false
 					end
@@ -149,9 +178,7 @@ local function install(replacementApi)
 				local params = count > 0 and select(count, ...) or nil
 				local node = renderOriginal(...)
 				if node ~= nil then
-					images.hasInlineStyleByNode[node] = type(params) == "table"
-						and params.meta ~= nil
-						and params.meta.styleSheet ~= nil
+					images.metaByNode[node] = type(params) == "table" and params.meta or emptyMeta
 				end
 				return node
 			end
@@ -159,21 +186,23 @@ local function install(replacementApi)
 
 		return function(content, gray)
 			local images = imagesByContext[react.getCallingRecipeCtx()]
-			local hasInlineStyle = images and images.hasInlineStyleByNode[content]
-			if hasInlineStyle == nil then
+			local meta = images and images.metaByNode[content]
+			if meta == nil then
 				-- Tinting an unknown content container could also recolour text.
 				return content
 			end
-			if gray == nil and hasInlineStyle then
+			if gray == nil and meta.styleSheet ~= nil then
 				return content
 			end
-			assert(not hasInlineStyle, "Dark UI icon styling cannot merge an existing inline stylesheet")
-			local style = gray == nil and vanillaInlineStyle or stylesByGray[gray]
+			local style = gray == nil and vanillaOverlay or stylesByGray[gray]
 			if style == nil then
-				style = styleutil.makeStyle({ color = guiUtil.grayColor(gray) })
+				style = makeInlineOverlay({ color = guiUtil.grayColor(gray) })
 				stylesByGray[gray] = style
 			end
-			return builtin.WithComponentParams({ item = content, styleSheet = style })
+			return builtin.WithComponentParams({
+				item = content,
+				styleSheet = guiUtil.mergeStyleSheet(meta.styleSheet, style),
+			})
 		end
 	end
 
@@ -277,13 +306,10 @@ local function install(replacementApi)
 			end
 			local backgroundGray = settings.colorGray(settings.background, backgroundChoiceId, contrastId, stateId)
 			local borderGray = settings.colorGray(settings.border, borderChoiceId, contrastId, stateId)
-			local hasButtonOverride = backgroundGray ~= nil or borderChoiceId ~= settings.VANILLA_CHOICE_ID
-			if hasButtonOverride then
-				assert(meta.styleSheet == nil, "Dark UI button styling cannot merge an existing inline stylesheet")
-			end
-			if meta.styleSheet == nil then
-				configured.meta.styleSheet = getInlineButtonStyle(backgroundGray, borderChoiceId, borderGray)
-			end
+			configured.meta.styleSheet = guiUtil.mergeStyleSheet(
+				meta.styleSheet,
+				getInlineButtonStyle(backgroundGray, borderChoiceId, borderGray)
+			)
 			local iconGray = settings.colorGray(settings.icon, iconChoiceId, contrastId, stateId)
 			configured.content = styleInlineIcon(params.content, iconGray)
 			arguments[arguments.n] = configured
@@ -334,7 +360,11 @@ local function install(replacementApi)
 				end
 				local parent = react.getCurrentRecipeName()
 				local targeted = name == "ToolButton" and toolButtonRecipes[parent] == true
-					or name == "ToggleButton" and (parent == "NodeEditorButton" or hasClass(existingClass, "extra"))
+				if name == "ToggleButton" then
+					targeted = parent == "NodeEditorButton"
+						or extraButtonRecipes[react.getCurrentRecipeId()] == true
+							and hasClass(existingClass, "extra")
+				end
 				if not targeted then
 					return renderOriginal(...)
 				end
@@ -350,10 +380,10 @@ local function install(replacementApi)
 	end
 
 	local function interceptInlineStrip()
-		local stylesByChoice = { [settings.VANILLA_CHOICE_ID] = vanillaInlineStyle }
+		local stylesByChoice = { [settings.VANILLA_CHOICE_ID] = vanillaOverlay }
 		for _, choice in ipairs(settings.strip.choices) do
 			if choice.gray ~= nil then
-				stylesByChoice[choice.id] = styleutil.makeStyle({ backgroundColor = guiUtil.grayColor(choice.gray) })
+				stylesByChoice[choice.id] = makeInlineOverlay({ backgroundColor = guiUtil.grayColor(choice.gray) })
 			end
 		end
 
@@ -375,13 +405,9 @@ local function install(replacementApi)
 					return renderOriginal(...)
 				end
 				local style = assert(stylesByChoice[choiceId], "Dark UI received an invalid inline strip colour")
-				assert(
-					params.meta.styleSheet == nil,
-					"Dark UI strip styling cannot merge an existing inline stylesheet"
-				)
 				local configured = shallowCopy(params)
 				configured.meta = shallowCopy(params.meta)
-				configured.meta.styleSheet = style
+				configured.meta.styleSheet = guiUtil.mergeStyleSheet(params.meta.styleSheet, style)
 				local arguments = table.pack(...)
 				arguments[count] = configured
 				return renderOriginal(unpackValues(arguments, 1, count))
@@ -390,14 +416,21 @@ local function install(replacementApi)
 	end
 
 	local function registerThemedGameBar()
-		return recipeComposition.wrapActive(gameBar.GameBar, "GameBar", "DarkUiThemedGameBar", function(recipeChain)
-			return function(param)
-				assert(type(param) == "table", "Dark UI GameBar parameters must be a table")
-				local choiceId = reactSettings.useValue(settings.SECTION_ID, settings.text.key):old()
-				react.setStyleClasses(unpackValues(settings.textStyleClasses(choiceId)))
-				return recipeComposition.render(recipeChain, param)
+		local themedGameBar = recipeComposition.wrapActive(
+			gameBar.GameBar,
+			"GameBar",
+			"DarkUiThemedGameBar",
+			function(recipeChain)
+				return function(param)
+					assert(type(param) == "table", "Dark UI GameBar parameters must be a table")
+					local choiceId = reactSettings.useValue(settings.SECTION_ID, settings.text.key):old()
+					react.setStyleClasses(unpackValues(settings.textStyleClasses(choiceId)))
+					return recipeComposition.render(recipeChain, param)
+				end
 			end
-		end)
+		)
+		includeExtraButtonRecipe(themedGameBar)
+		return themedGameBar
 	end
 
 	interceptButton("ToolButton")
