@@ -5,74 +5,74 @@
             "role": "CREATOR"
         }
     ],
-    "description": "An almost-black, monochrome interface theme for Transport Fever 3 \nThemes the game's shared palette; custom mod skins are outside scope.\nMore configuration options are planned once mod parameters work cleanly with stylesheets\nSignal icons currently don't appear to be overridable\n\nOfficial Community TpF Discord: https://discord.gg/aq9EpJsgzg\nAus-Linux/MacOS Discord: https://discord.gg/X4H2gdEr4D\n[url=https://apasz.com]Homepage[/url]\n[url=https://ko-fi.com/apasz]Ko-fi for me ;3[/url]",
+    "description": "An almost-black, monochrome interface theme for Transport Fever 3.\nThemes the game's shared palette while preserving status colours.\nOptional game bar colour and contrast settings are available through UI Tweaks. The base theme requires no other mods.\nMod toolbar backgrounds and borders retain standard or mod-specific styling, with optional icon recolouring.\nCustom skins, hard-coded colours, and colours baked into textures may remain unchanged. Other mods that replace the same palette may conflict.\nSignal icons currently appear unaffected by interface themes. Some custom or nested UI elements may remain unstyled or conflict with game bar customisation.\n\nOfficial Community TpF Discord: https://discord.gg/aq9EpJsgzg\nAus-Linux/MacOS Discord: https://discord.gg/X4H2gdEr4D\n[url=https://apasz.com]Homepage[/url]\n[url=https://ko-fi.com/apasz]Ko-fi for me ;3[/url]",
     "name": "Dark UI",
     "summary": "An almost-black, monochrome interface theme",
     "localization": {
         "en": {
             "name": "Dark UI",
             "summary": "An almost-black, monochrome interface theme",
-            "description": "An almost-black, monochrome interface theme for Transport Fever 3 \nThemes the game's shared palette; custom mod skins are outside scope.\nMore configuration options are planned once mod parameters work cleanly with stylesheets\nSignal icons currently don't appear to be overridable\n\nOfficial Community TpF Discord: https://discord.gg/aq9EpJsgzg\nAus-Linux/MacOS Discord: https://discord.gg/X4H2gdEr4D\n[url=https://apasz.com]Homepage[/url]\n[url=https://ko-fi.com/apasz]Ko-fi for me ;3[/url]"
+            "description": "An almost-black, monochrome interface theme for Transport Fever 3.\nThemes the game's shared palette while preserving status colours.\nOptional game bar colour and contrast settings are available through UI Tweaks. The base theme requires no other mods.\nMod toolbar backgrounds and borders retain standard or mod-specific styling, with optional icon recolouring.\nCustom skins, hard-coded colours, and colours baked into textures may remain unchanged. Other mods that replace the same palette may conflict.\nSignal icons currently appear unaffected by interface themes. Some custom or nested UI elements may remain unstyled or conflict with game bar customisation.\n\nOfficial Community TpF Discord: https://discord.gg/aq9EpJsgzg\nAus-Linux/MacOS Discord: https://discord.gg/X4H2gdEr4D\n[url=https://apasz.com]Homepage[/url]\n[url=https://ko-fi.com/apasz]Ko-fi for me ;3[/url]"
         },
         "de": {
             "name": "Dark UI",
             "summary": "Ein fast schwarzes, monochromes Oberflächenthema",
-            "description": "Ein fast schwarzes, monochromes Oberflächenthema für Transport Fever 3.\nWeitere Konfigurationsoptionen sind geplant, sobald Mod-Parameter sauber mit Stylesheets funktionieren.\nSignal icons currently don't appear to be overridable"
+            "description": "Ein fast schwarzes, monochromes Oberflächenthema für Transport Fever 3.\nPasst die gemeinsame Farbpalette des Spiels an und erhält Statusfarben.\nUI Tweaks bietet optionale Farb- und Kontrasteinstellungen für die Spielleiste. Für das Basisthema sind keine weiteren Mods erforderlich.\nHintergründe und Rahmen von Mod-Werkzeugleisten behalten ihre Standard- oder mod-spezifische Gestaltung; die Symbolfarben lassen sich optional anpassen.\nBenutzerdefinierte Skins, fest codierte Farben und in Texturen eingebettete Farben können unverändert bleiben. Andere Mods, die dieselbe Palette ersetzen, können Konflikte verursachen.\nSignalsymbole scheinen derzeit von Oberflächenthemen unbeeinflusst zu bleiben. Einige benutzerdefinierte oder verschachtelte Oberflächenelemente werden möglicherweise nicht angepasst oder verursachen Konflikte mit der Anpassung der Spielleiste."
         },
         "es": {
             "name": "Dark UI",
             "summary": "Un tema de interfaz casi negro y monocromático",
-            "description": "Un tema de interfaz casi negro y monocromático para Transport Fever 3.\nSe prevén más opciones de configuración cuando los parámetros de los mods funcionen correctamente con las hojas de estilo.\nSignal icons currently don't appear to be overridable"
+            "description": "Un tema de interfaz casi negro y monocromático para Transport Fever 3.\nModifica la paleta compartida del juego y conserva los colores de estado.\nUI Tweaks ofrece ajustes opcionales de color y contraste para la barra de juego. El tema base no requiere otros mods.\nLos fondos y bordes de las barras de herramientas de los mods conservan su estilo estándar o propio, con recoloreado opcional de iconos.\nLas apariencias personalizadas, los colores definidos directamente en el código y los integrados en texturas pueden permanecer sin cambios. Otros mods que sustituyan la misma paleta pueden causar conflictos.\nActualmente, los temas de interfaz no parecen afectar a los iconos de señales. Algunos elementos de interfaz personalizados o anidados pueden conservar su estilo original o entrar en conflicto con la personalización de la barra de juego."
         },
         "fr": {
             "name": "Dark UI",
             "summary": "Un thème d’interface presque noir et monochrome",
-            "description": "Un thème d’interface presque noir et monochrome pour Transport Fever 3.\nD’autres options de configuration sont prévues lorsque les paramètres de mod fonctionneront correctement avec les feuilles de style.\nSignal icons currently don't appear to be overridable"
+            "description": "Un thème d’interface presque noir et monochrome pour Transport Fever 3.\nModifie la palette commune du jeu tout en préservant les couleurs d’état.\nUI Tweaks propose des réglages facultatifs de couleur et de contraste pour la barre de jeu. Le thème de base ne nécessite aucun autre mod.\nLes fonds et bordures des barres d’outils des mods conservent leur style standard ou propre au mod, avec une recoloration facultative des icônes.\nLes habillages personnalisés, les couleurs codées en dur et celles intégrées aux textures peuvent rester inchangés. D’autres mods remplaçant la même palette peuvent provoquer des conflits.\nLes thèmes d’interface semblent actuellement sans effet sur les icônes de signaux. Certains éléments d’interface personnalisés ou imbriqués peuvent conserver leur style d’origine ou entrer en conflit avec la personnalisation de la barre de jeu."
         },
         "it": {
             "name": "Dark UI",
             "summary": "Un tema dell'interfaccia quasi nero e monocromatico",
-            "description": "Un tema dell'interfaccia quasi nero e monocromatico per Transport Fever 3.\nSono previste ulteriori opzioni di configurazione quando i parametri delle mod funzioneranno correttamente con i fogli di stile.\nSignal icons currently don't appear to be overridable"
+            "description": "Un tema dell'interfaccia quasi nero e monocromatico per Transport Fever 3.\nModifica la tavolozza condivisa del gioco preservando i colori di stato.\nUI Tweaks offre impostazioni facoltative di colore e contrasto per la barra di gioco. Il tema base non richiede altre mod.\nGli sfondi e i bordi delle barre degli strumenti delle mod mantengono lo stile standard o specifico della mod, con ricolorazione facoltativa delle icone.\nLe skin personalizzate, i colori definiti direttamente nel codice e quelli incorporati nelle texture possono rimanere invariati. Altre mod che sostituiscono la stessa tavolozza possono causare conflitti.\nI temi dell'interfaccia attualmente non sembrano influire sulle icone dei segnali. Alcuni elementi dell'interfaccia personalizzati o annidati possono mantenere lo stile originale o entrare in conflitto con la personalizzazione della barra di gioco."
         },
         "ja": {
             "name": "Dark UI",
             "summary": "ほぼ黒一色のモノクロームUIテーマ",
-            "description": "Transport Fever 3向けの、ほぼ黒一色のモノクロームUIテーマです。\nMODパラメータがスタイルシートで適切に動作するようになれば、追加の設定オプションを予定しています。\nSignal icons currently don't appear to be overridable"
+            "description": "Transport Fever 3向けの、ほぼ黒一色のモノクロームUIテーマです。\n状態を示す色を維持しながら、ゲーム共通のカラーパレットを変更します。\nUI Tweaksを導入すると、ゲームバーの色とコントラストを任意で設定できます。基本テーマに他のMODは必要ありません。\nMODツールバーの背景と枠線は標準またはMOD独自のスタイルを維持し、アイコンの色は任意で変更できます。\n独自のスキン、コード内で直接指定された色、テクスチャに組み込まれた色は変更されない場合があります。同じパレットを置き換える他のMODと競合する可能性があります。\n現在、信号アイコンにはUIテーマが反映されないようです。一部の独自UI要素や入れ子のUI要素にはテーマが適用されなかったり、ゲームバーのカスタマイズと競合したりする場合があります。"
         },
         "ko": {
             "name": "Dark UI",
             "summary": "거의 검은색의 단색 인터페이스 테마",
-            "description": "Transport Fever 3용 거의 검은색의 단색 인터페이스 테마입니다.\n모드 매개변수가 스타일시트에서 제대로 작동하게 되면 추가 설정 옵션을 제공할 예정입니다.\nSignal icons currently don't appear to be overridable"
+            "description": "Transport Fever 3용 거의 검은색의 단색 인터페이스 테마입니다.\n상태를 나타내는 색상을 유지하면서 게임의 공통 색상 팔레트를 변경합니다.\nUI Tweaks를 설치하면 게임 바의 색상과 대비를 선택적으로 설정할 수 있습니다. 기본 테마에는 다른 모드가 필요하지 않습니다.\n모드 도구 모음의 배경과 테두리는 기본 스타일이나 해당 모드의 스타일을 유지하며, 아이콘 색상은 선택적으로 변경할 수 있습니다.\n사용자 지정 스킨, 코드에 직접 지정된 색상, 텍스처에 포함된 색상은 변경되지 않을 수 있습니다. 같은 팔레트를 교체하는 다른 모드와 충돌할 수 있습니다.\n현재 신호 아이콘에는 인터페이스 테마가 적용되지 않는 것으로 보입니다. 일부 사용자 지정 또는 중첩된 UI 요소에는 테마가 적용되지 않거나 게임 바 사용자 지정과 충돌할 수 있습니다."
         },
         "nl": {
             "name": "Dark UI",
             "summary": "Een bijna zwart, monochroom interfacethema",
-            "description": "Een bijna zwart, monochroom interfacethema voor Transport Fever 3.\nMeer configuratieopties zijn gepland zodra modparameters goed met stylesheets werken.\nSignal icons currently don't appear to be overridable"
+            "description": "Een bijna zwart, monochroom interfacethema voor Transport Fever 3.\nPast het gedeelde kleurenpalet van het spel aan en behoudt statuskleuren.\nUI Tweaks biedt optionele kleur- en contrastinstellingen voor de spelbalk. Het basisthema vereist geen andere mods.\nAchtergronden en randen van modwerkbalken behouden hun standaardstijl of de eigen stijl van de mod, met optionele aanpassing van de pictogramkleuren.\nAangepaste skins, hardgecodeerde kleuren en kleuren die in texturen zijn verwerkt, kunnen ongewijzigd blijven. Andere mods die hetzelfde palet vervangen, kunnen conflicten veroorzaken.\nSignaalpictogrammen lijken momenteel niet door interfacethema’s te worden beïnvloed. Sommige aangepaste of geneste interface-elementen kunnen hun oorspronkelijke stijl behouden of conflicten veroorzaken met de aanpassing van de spelbalk."
         },
         "pl": {
             "name": "Dark UI",
             "summary": "Prawie czarny, monochromatyczny motyw interfejsu",
-            "description": "Prawie czarny, monochromatyczny motyw interfejsu dla Transport Fever 3.\nDalsze opcje konfiguracji są planowane, gdy parametry modów będą poprawnie działać z arkuszami stylów.\nSignal icons currently don't appear to be overridable"
+            "description": "Prawie czarny, monochromatyczny motyw interfejsu dla Transport Fever 3.\nZmienia wspólną paletę kolorów gry, zachowując kolory stanu.\nUI Tweaks udostępnia opcjonalne ustawienia kolorów i kontrastu paska gry. Podstawowy motyw nie wymaga innych modów.\nTła i obramowania pasków narzędzi modów zachowują styl standardowy lub własny styl moda, z opcjonalną zmianą kolorów ikon.\nNiestandardowe skórki, kolory zapisane bezpośrednio w kodzie oraz kolory zawarte w teksturach mogą pozostać niezmienione. Inne mody zastępujące tę samą paletę mogą powodować konflikty.\nMotywy interfejsu obecnie nie wydają się wpływać na ikony sygnałów. Niektóre niestandardowe lub zagnieżdżone elementy interfejsu mogą zachować pierwotny styl lub powodować konflikty z dostosowywaniem paska gry."
         },
         "pt_BR": {
             "name": "Dark UI",
             "summary": "Um tema de interface quase preto e monocromático",
-            "description": "Um tema de interface quase preto e monocromático para Transport Fever 3.\nMais opções de configuração estão previstas quando os parâmetros dos mods funcionarem corretamente com folhas de estilo.\nSignal icons currently don't appear to be overridable"
+            "description": "Um tema de interface quase preto e monocromático para Transport Fever 3.\nModifica a paleta compartilhada do jogo, preservando as cores de estado.\nO UI Tweaks oferece configurações opcionais de cor e contraste para a barra do jogo. O tema base não requer outros mods.\nOs fundos e as bordas das barras de ferramentas dos mods mantêm o estilo padrão ou próprio do mod, com alteração opcional das cores dos ícones.\nSkins personalizadas, cores definidas diretamente no código e cores incorporadas às texturas podem permanecer inalteradas. Outros mods que substituam a mesma paleta podem causar conflitos.\nAtualmente, os temas de interface não parecem afetar os ícones de sinais. Alguns elementos de interface personalizados ou aninhados podem manter seu estilo original ou entrar em conflito com a personalização da barra do jogo."
         },
         "ru": {
             "name": "Dark UI",
             "summary": "Почти чёрная монохромная тема интерфейса",
-            "description": "Почти чёрная монохромная тема интерфейса для Transport Fever 3.\nДополнительные параметры настройки появятся, когда параметры модов будут корректно работать со стилями.\nSignal icons currently don't appear to be overridable"
+            "description": "Почти чёрная монохромная тема интерфейса для Transport Fever 3.\nИзменяет общую палитру игры, сохраняя цвета состояний.\nUI Tweaks предоставляет дополнительные настройки цвета и контрастности игровой панели. Для базовой темы другие моды не нужны.\nФон и рамки панелей инструментов модов сохраняют стандартное оформление или оформление самого мода; цвет значков можно изменить по желанию.\nПользовательские оболочки, цвета, заданные непосредственно в коде, и цвета, встроенные в текстуры, могут остаться без изменений. Другие моды, заменяющие ту же палитру, могут вызывать конфликты.\nВ настоящее время темы интерфейса, по всей видимости, не влияют на значки сигналов. Некоторые пользовательские или вложенные элементы интерфейса могут сохранить исходное оформление или конфликтовать с настройками игровой панели."
         },
         "zh_CN": {
             "name": "Dark UI",
             "summary": "近乎全黑的单色界面主题",
-            "description": "适用于 Transport Fever 3 的近乎全黑单色界面主题。\n一旦模组参数能够与样式表正常配合使用，计划加入更多配置选项。\nSignal icons currently don't appear to be overridable"
+            "description": "适用于 Transport Fever 3 的近乎全黑单色界面主题。\n修改游戏的共享调色板，同时保留表示状态的颜色。\n安装 UI Tweaks 后，可选择调整游戏栏的颜色和对比度。基础主题无需其他模组。\n模组工具栏的背景和边框保留默认样式或模组自带样式，可选择调整图标颜色。\n自定义皮肤、代码中直接指定的颜色和纹理内嵌的颜色可能保持不变。替换同一调色板的其他模组可能产生冲突。\n目前，信号图标似乎不受界面主题影响。部分自定义或嵌套的界面元素可能不会应用主题，或与游戏栏自定义设置发生冲突。"
         },
         "zh_TW": {
             "name": "Dark UI",
             "summary": "近乎全黑的單色介面主題",
-            "description": "適用於 Transport Fever 3 的近乎全黑單色介面主題。\n一旦模組參數能與樣式表正常搭配使用，預計會加入更多設定選項。\nSignal icons currently don't appear to be overridable"
+            "description": "適用於 Transport Fever 3 的近乎全黑單色介面主題。\n修改遊戲的共用調色盤，同時保留表示狀態的顏色。\n安裝 UI Tweaks 後，可選擇調整遊戲列的顏色和對比度。基本主題不需要其他模組。\n模組工具列的背景和邊框保留預設樣式或模組本身的樣式，可選擇調整圖示顏色。\n自訂外觀、程式碼中直接指定的顏色和紋理內嵌的顏色可能維持不變。取代同一調色盤的其他模組可能產生衝突。\n目前，訊號圖示似乎不受介面主題影響。部分自訂或巢狀的介面元素可能不會套用主題，或與遊戲列自訂設定發生衝突。"
         }
     },
     "tags": [
