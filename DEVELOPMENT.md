@@ -201,3 +201,17 @@ states, Vanilla/reset behaviour, and representative mod toolbar buttons in game.
 For a new failure, keep the exact error and relevant `stdout.txt` stack trace with
 the reproduction steps. Record whether the failing path is the working tree or a
 staged copy, and whether that copy is linked to the source or was copied earlier.
+## Settings translations
+
+**Found by source inspection during the metadata audit; host checks cover the fix.**
+
+Game-bar option labels and descriptions were plain English strings. Routing those
+strings through the game's translation function and adding a root `strings.json`
+lets all 13 game languages use the same settings definitions. Stored setting keys,
+choice IDs, defaults, and style values are unchanged.
+
+The shared description checks validate every catalogue and placeholder. Localised
+resource fixtures exercise the settings in each language; the existing settings
+and React tests use the shared English translation fixture. These checks do not
+establish native text layout. Restart the game and inspect long settings labels
+in the desired language when verifying the interface in game.

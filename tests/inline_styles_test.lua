@@ -1,3 +1,5 @@
+dofile("../tools/localization_fixture.lua")
+
 -- Runs the shipped React and styleutil code with a strict stand-in for the native API.
 -- Native rendering, stylesheet precedence, and the reported limit still need an in-game check.
 local gameSource = dofile("tests/game_source.lua").new(assert(arg[1], "Pass the TpF3 install path"))

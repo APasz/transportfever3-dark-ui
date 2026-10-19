@@ -1,3 +1,5 @@
+dofile("../tools/localization_fixture.lua")
+
 local DARK_UI_MODULE = "apasz_dark_ui_1::/gui/main/dark_ui_settings.lua"
 local UI_TWEAKS_INTEGRATION_MODULE = "apasz_dark_ui_1::/gui/main/dark_ui_ui_tweaks.lua"
 local PALETTE_MODULE = "apasz_dark_ui_1::/gui/main/dark_ui_palette.lua"

@@ -1,3 +1,5 @@
+dofile("../tools/localization_fixture.lua")
+
 local UI_TWEAKS_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/settings.lua"
 local REACT_SETTINGS_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/react_settings.lua"
 local RECIPE_COMPOSITION_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/recipe_composition.lua"

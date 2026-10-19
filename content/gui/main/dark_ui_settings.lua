@@ -11,21 +11,21 @@ settings.NONE_CHOICE_ID = "none"
 settings.GAME_BAR_STYLE_CLASS = "dark-ui-game-bar"
 
 local GRAY_LEVELS = {
-	{ id = "black", gray = 0, name = "Black" },
-	{ id = "dark_gray", gray = palette.darkGray * 255, name = "Dark grey" },
-	{ id = "gray", gray = 128, name = "Grey" },
-	{ id = "light_gray", gray = 192, name = "Light grey" },
-	{ id = "white", gray = 255, name = "White" },
+	{ id = "black", gray = 0, name = _("Black") },
+	{ id = "dark_gray", gray = palette.darkGray * 255, name = _("Dark grey") },
+	{ id = "gray", gray = 128, name = _("Grey") },
+	{ id = "light_gray", gray = 192, name = _("Light grey") },
+	{ id = "white", gray = 255, name = _("White") },
 }
 
 local function makeColorChoices(includeNone)
 	local choices = {
-		{ id = settings.VANILLA_CHOICE_ID, label = "Vanilla" },
+		{ id = settings.VANILLA_CHOICE_ID, label = _("Vanilla") },
 	}
 	if includeNone then
 		choices[#choices + 1] = {
 			id = settings.NONE_CHOICE_ID,
-			label = "None",
+			label = _("None"),
 		}
 	end
 	for _, level in ipairs(GRAY_LEVELS) do
@@ -40,20 +40,22 @@ end
 
 settings.background = {
 	key = "game_bar_background_color",
-	label = "Game bar background",
+	label = _("Game bar background"),
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
-	description = "Built-in game bar buttons only; mod toolbar backgrounds use standard styling like the Layers button.",
+	description = _(
+		"Built-in game bar buttons only; mod toolbar backgrounds use standard styling like the Layers button."
+	),
 	choices = makeColorChoices(false),
 	stateful = true,
 }
 
 settings.border = {
 	key = "game_bar_border_color",
-	label = "Game bar border",
+	label = _("Game bar border"),
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
-	description = "Built-in buttons only. None removes the ring; Vanilla preserves the game's border styling.",
+	description = _("Built-in buttons only. None removes the ring; Vanilla preserves the game's border styling."),
 	choices = makeColorChoices(true),
 	stateful = true,
 	imageFile = "::/gui/main/design/disk_mini_contour.tga",
@@ -61,17 +63,17 @@ settings.border = {
 
 settings.icon = {
 	key = "game_bar_icon_color",
-	label = "Game bar icons",
+	label = _("Game bar icons"),
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
-	description = "Applies to built-in and mod toolbar icons.",
+	description = _("Applies to built-in and mod toolbar icons."),
 	choices = makeColorChoices(false),
 	stateful = true,
 }
 
 settings.strip = {
 	key = "game_bar_strip_color",
-	label = "Game bar strip",
+	label = _("Game bar strip"),
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
 	choices = makeColorChoices(false),
@@ -81,8 +83,8 @@ settings.text = {
 	key = "game_bar_text_color",
 	classPrefix = "dark-ui-text-",
 	overrideClass = "dark-ui-override-text",
-	label = "Built-in game bar info text",
-	description = "Styles Earnings and Transported while preserving semantic and third-party plugin colours.",
+	label = _("Built-in game bar info text"),
+	description = _("Styles Earnings and Transported while preserving semantic and third-party plugin colours."),
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
 	choices = makeColorChoices(false),
@@ -90,14 +92,14 @@ settings.text = {
 
 settings.stateContrast = {
 	key = "game_bar_state_contrast",
-	label = "Game bar state contrast",
-	description = "Controls the difference between normal, selected, hovered, and disabled button colours.",
+	label = _("Game bar state contrast"),
+	description = _("Controls the difference between normal, selected, hovered, and disabled button colours."),
 	kind = "dropdown",
 	default = "standard",
 	choices = {
 		{
 			id = "subtle",
-			label = "Subtle",
+			label = _("Subtle"),
 			selectedOffset = 10,
 			hoverOffset = 20,
 			selectedHoverOffset = 30,
@@ -105,7 +107,7 @@ settings.stateContrast = {
 		},
 		{
 			id = "standard",
-			label = "Standard",
+			label = _("Standard"),
 			selectedOffset = 15,
 			hoverOffset = 30,
 			selectedHoverOffset = 45,
@@ -113,7 +115,7 @@ settings.stateContrast = {
 		},
 		{
 			id = "strong",
-			label = "Strong",
+			label = _("Strong"),
 			selectedOffset = 25,
 			hoverOffset = 50,
 			selectedHoverOffset = 75,
@@ -124,8 +126,8 @@ settings.stateContrast = {
 
 settings.includeBulldozer = {
 	key = "game_bar_include_bulldozer",
-	label = "Include bulldozer buttons",
-	description = "Apply game bar button colours to both bulldozers; off preserves their existing styling.",
+	label = _("Include bulldozer buttons"),
+	description = _("Apply game bar button colours to both bulldozers; off preserves their existing styling."),
 	kind = "toggle",
 	default = false,
 }
