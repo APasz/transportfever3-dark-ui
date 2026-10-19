@@ -43,6 +43,7 @@ settings.background = {
 	label = "Game bar background",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
+	description = "Built-in game bar buttons only; mod toolbar backgrounds use standard styling like the Layers button.",
 	choices = makeColorChoices(false),
 	stateful = true,
 }
@@ -52,7 +53,7 @@ settings.border = {
 	label = "Game bar border",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
-	description = "None forcibly removes the ring; Vanilla preserves the game's border styling.",
+	description = "Built-in buttons only. None removes the ring; Vanilla preserves the game's border styling.",
 	choices = makeColorChoices(true),
 	stateful = true,
 	imageFile = "::/gui/main/design/disk_mini_contour.tga",
@@ -63,6 +64,7 @@ settings.icon = {
 	label = "Game bar icons",
 	kind = "dropdown",
 	default = settings.VANILLA_CHOICE_ID,
+	description = "Applies to built-in and mod toolbar icons.",
 	choices = makeColorChoices(false),
 	stateful = true,
 }

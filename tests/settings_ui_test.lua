@@ -8,6 +8,7 @@ local UI_TWEAKS_RESOURCE = "apasz_ui_tweaks::/gui/ui_tweaks/ui_tweaks_settings.r
 local PALETTE_MODULE = "apasz_dark_ui_1::/gui/main/dark_ui_palette.lua"
 local GUI_UTIL_MODULE = "apasz_dark_ui_1::/gui/main/dark_ui_gui_util.lua"
 local STORAGE_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/settings_storage.lua"
+resolveutil = dofile("tests/ui_tweaks_loader.lua")
 
 local centralValues = {
 	game_bar_background_color = "vanilla",
@@ -120,9 +121,11 @@ local TOOL_BUTTON_RECIPE_ID = 103
 local TOGGLE_BUTTON_RECIPE_ID = 104
 local COMPONENT_RECIPE_ID = 105
 local IMAGE_RECIPE_ID = 106
+local BUTTON_RECIPE_ID = 107
 local builtin = {
 	ToolButton = function() end,
 	ToggleButton = function() end,
+	Button = function() end,
 	Component = function() end,
 	ImageView = function() end,
 }
@@ -157,6 +160,7 @@ end
 local recipeIds = {
 	[builtin.ToolButton] = TOOL_BUTTON_RECIPE_ID,
 	[builtin.ToggleButton] = TOGGLE_BUTTON_RECIPE_ID,
+	[builtin.Button] = BUTTON_RECIPE_ID,
 	[builtin.Component] = COMPONENT_RECIPE_ID,
 	[builtin.ImageView] = IMAGE_RECIPE_ID,
 	[originalGameBar] = GAME_BAR_RECIPE_ID,
@@ -199,6 +203,9 @@ _react = {
 			return table.pack(...)
 		end,
 		[TOGGLE_BUTTON_RECIPE_ID] = function(...)
+			return table.pack(...)
+		end,
+		[BUTTON_RECIPE_ID] = function(...)
 			return table.pack(...)
 		end,
 		[COMPONENT_RECIPE_ID] = function(...)

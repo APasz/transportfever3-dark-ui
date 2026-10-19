@@ -8,6 +8,7 @@ local UI_TWEAKS_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/settings.lua"
 local REACT_SETTINGS_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/react_settings.lua"
 local COMPOSITION_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/recipe_composition.lua"
 local STORAGE_MODULE = "apasz_ui_tweaks::/gui/ui_tweaks/settings_storage.lua"
+resolveutil = dofile("tests/ui_tweaks_loader.lua")
 
 package.loaded[INTEGRATION_MODULE] = dofile("content/gui/main/dark_ui_ui_tweaks.lua")
 package.loaded[GUI_UTIL_MODULE] = dofile("content/gui/main/dark_ui_gui_util.lua")
@@ -112,6 +113,7 @@ api = {
 				builtin = {
 					Component = nativeConstructor({ layout = true }),
 					ImageView = nativeConstructor({ path = true, scaling = true }),
+					Button = nativeConstructor({ content = true, onClick = true, onDoubleClick = true }),
 					ToolButton = nativeConstructor({
 						toolName = true,
 						toolDefinition = true,
@@ -159,7 +161,7 @@ api = {
 	},
 }
 _react = {
-	builtin = { WithComponentParams = 1, Component = 2, ToolButton = 3, ImageView = 4 },
+	builtin = { WithComponentParams = 1, Component = 2, ToolButton = 3, ImageView = 4, Button = 5 },
 	recipes = {},
 	originalRecipeFn = {},
 	recipeReplace = {},
@@ -207,12 +209,21 @@ local shippedToolButton = assert(load("return " .. toolDeclaration, "TpF3 ToolBu
 local builtin = {
 	Component = react.DeclareBuiltinWithUserdata("Component", function() end),
 	ImageView = react.DeclareBuiltinWithUserdata("ImageView", function() end),
+	Button = react.DeclareBuiltinWithUserdata("Button", function() end),
 	WithComponentParams = react.builtin.WithComponentParams,
 	ToolButton = shippedToolButton,
 	ToggleButton = react.RegisterRecipe("ToggleButton", function() end),
 }
 local toolbarPlugins, toolbarPluginBodies, toolbarRecipes = {}, {}, {}
-for _, name in ipairs({ "ModToolbarStyleFixture", "ModToolbarIconProbe", "NonImageToolbarProbe", "SiblingIconProbe" }) do
+for _, name in ipairs({
+	"ModToolbarConstructorFixture",
+	"ModToolbarActionFixture",
+	"ModToolbarToolFixture",
+	"ModToolbarStyleFixture",
+	"ModToolbarIconProbe",
+	"NonImageToolbarProbe",
+	"SiblingIconProbe",
+}) do
 	local recipe = react.RegisterRecipe(name, function(...)
 		return assert(toolbarPluginBodies[name], "Missing toolbar plugin fixture")(...)
 	end)
@@ -297,6 +308,9 @@ package.loaded[STORAGE_MODULE] = {
 	read = function()
 		return { sections = {} }
 	end,
+	saveSections = function()
+		error("Inline styling test unexpectedly migrated settings")
+	end,
 }
 
 local componentId = react.GetRecipeId(builtin.Component)
@@ -322,7 +336,14 @@ _react.recipeReplace[toolId] = function(...)
 	return _react.originalRecipeFn[toolId](...)
 end
 local function loadTheme()
-	local environment = setmetatable({ type = reactEnvironment.type }, { __index = _G })
+	local runtimeTable = {}
+	for name, value in pairs(table) do
+		-- The game's embedded Lua omits table.move, even when the host interpreter provides it.
+		if name ~= "move" then
+			runtimeTable[name] = value
+		end
+	end
+	local environment = setmetatable({ type = reactEnvironment.type, table = runtimeTable }, { __index = _G })
 	assert(loadfile("content/gui/main/dark_ui_game_bar_theme.script.lua", "t", environment))()
 	return environment.data()
 end
@@ -412,7 +433,11 @@ local function newContext()
 		self.handlers[#self.handlers + 1] = handler
 	end
 	function context:makeNodeWithProps(recipeId, localKey, props)
-		if recipeId == _react.builtin.ToolButton or recipeId == react.GetRecipeId(builtin.ToggleButton) then
+		if
+			recipeId == _react.builtin.ToolButton
+			or recipeId == _react.builtin.Button
+			or recipeId == react.GetRecipeId(builtin.ToggleButton)
+		then
 			local content = props.props[1].content
 			assert(content == nil or self.nodesById[content] ~= nil, "Button content belongs to another recipe context")
 		elseif recipeId == _react.builtin.WithComponentParams then
@@ -475,9 +500,10 @@ local function newContext()
 	return context
 end
 
-local imageConstructorRecipe = react.RegisterRecipe("ImageConstructorFixture", function(...)
+local imageConstructorRecipe = toolbarRecipes.ModToolbarConstructorFixture
+toolbarPluginBodies.ModToolbarConstructorFixture = function(...)
 	return builtin.ImageView(...)
-end)
+end
 local constructorContext = newContext()
 constructorContext:render(imageConstructorRecipe)
 assert(#constructorContext.nodes == 1 and #constructorContext.states == 0)
@@ -500,9 +526,8 @@ local tileBuiltinFields = {
 	FloatingLayout = { children = true },
 	FloatingLayoutChild = { localKey = true, item = true, h = true, v = true },
 	TextView = { text = true },
-	Button = { content = true, onClick = true, onDoubleClick = true },
 }
-local nextBuiltinId = _react.builtin.ImageView
+local nextBuiltinId = _react.builtin.Button
 for name, fields in pairs(tileBuiltinFields) do
 	nextBuiltinId = nextBuiltinId + 1
 	_react.builtin[name] = nextBuiltinId
@@ -563,7 +588,7 @@ for _, iconCount in ipairs({ 0, 3, 1, 0, 2, 0 }) do
 	end
 	local joinsBefore = queuedJoins
 	tileContext:render(tilelist.TileElement, tileParams)
-	assert(queuedJoins == joinsBefore + 1 and completedJoins == queuedJoins, "Image cleanup was not batched per render")
+	assert(queuedJoins == joinsBefore, "Toolbar image tracking leaked into the Load Game menu")
 	assert(
 		tileStateCount == nil or #tileContext.states == tileStateCount,
 		"Image count changed TileElement's hook slots"
@@ -573,16 +598,19 @@ end
 print("Dark UI Load Game TileElement regression test passed (shipped recipe; changing icon counts)")
 
 local imageHandles = setmetatable({}, { __mode = "k" })
-local imageLifetimeRecipe = react.RegisterRecipe("MenuImageLifetimeProbe", function(count)
+local imageLifetimeRecipe = toolbarRecipes.ModToolbarIconProbe
+toolbarPluginBodies.ModToolbarIconProbe = function(count)
 	for _ = 1, count do
-		local image = builtin.ImageView({ path = "menu-image.tga" })
+		local image = builtin.ImageView({ path = "toolbar-image.tga" })
 		imageHandles[image] = true
 	end
 	return builtin.Component({})
-end)
+end
 local lifetimeContext = newContext()
 for count = 1, 20 do
+	local joinsBefore = queuedJoins
 	lifetimeContext:render(imageLifetimeRecipe, count)
+	assert(queuedJoins == joinsBefore + 1 and completedJoins == queuedJoins, "Image cleanup was not batched per render")
 	collectgarbage("collect")
 	local retainedImages = 0
 	for _ in pairs(imageHandles) do
@@ -590,7 +618,7 @@ for count = 1, 20 do
 	end
 	assert(retainedImages == count, "Icon tracking retained images from a previous render")
 end
-assert(#lifetimeContext.states == 0, "Image tracking injected state into a menu recipe")
+assert(#lifetimeContext.states == 0, "Image tracking injected hook slots into a toolbar recipe")
 print("Dark UI image tracking lifetime test passed (render cleanup; no injected hook slots)")
 
 local invalidMetadataWrapper = react.RegisterWrapperRecipe("InvalidMetadataWrapperProbe", builtin.Component, function()
@@ -665,9 +693,12 @@ local reference = {
 local refArgument = react.ref({ reference })
 local styleArgument = react.style({ class = "external-class" })
 for _, arguments in ipairs({ { refArgument, styleArgument, params }, { styleArgument, refArgument, params } }) do
-	assert(context:render(background, table.unpack(arguments)).styleSheet == cachedStyles.black)
-	assert(reference.value.nodeId == context.nodes[1].id, "Inline styling changed the component reference")
-	assert(styleArgument.data.class == "external-class")
+	for _, trailingNil in ipairs({ false, true }) do
+		local count = #arguments + (trailingNil and 1 or 0)
+		assert(context:render(background, table.unpack(arguments, 1, count)).styleSheet == cachedStyles.black)
+		assert(reference.value.nodeId == context.nodes[1].id, "Inline styling changed the component reference")
+		assert(styleArgument.data.class == "external-class")
+	end
 end
 
 local unrelatedContext = newContext()
@@ -743,7 +774,7 @@ assert(
 print("Dark UI inline strip React bridge test passed (shipped React/styleutil; native rendering not tested)")
 
 uiTweaksAvailable = true
-local function buttonParent(name, recipe, makeContent)
+local function buttonParent(name, recipe, makeContent, extraArguments)
 	local function body(...)
 		local arguments = table.pack(...)
 		local params = arguments[arguments.n]
@@ -754,6 +785,12 @@ local function buttonParent(name, recipe, makeContent)
 		configured.content = params.content
 			or (makeContent and makeContent() or builtin.ImageView({ path = "test-icon.tga" }))
 		arguments[arguments.n] = configured
+		if extraArguments ~= nil then
+			for index = 1, extraArguments.n do
+				arguments[arguments.n + index] = extraArguments[index]
+			end
+			arguments.n = arguments.n + extraArguments.n
+		end
 		return recipe(table.unpack(arguments, 1, arguments.n))
 	end
 	if name == "GameBar" then
@@ -766,12 +803,14 @@ local function buttonParent(name, recipe, makeContent)
 	end
 	return react.RegisterRecipe(name, body)
 end
-local toolParent = buttonParent("ManagerToolButton", builtin.ToolButton)
+local toolParent =
+	buttonParent("ManagerToolButton", builtin.ToolButton, nil, table.pack(nil, "extra-tool-argument", nil))
 local toggleParent = buttonParent("NodeEditorButton", builtin.ToggleButton)
 local constructionParent = buttonParent("ConstructionToolButton", builtin.ToolButton)
 local unrelatedToolParent = buttonParent("AnotherToolParent", builtin.ToolButton)
 
-local function newButton(parent, params, isTool)
+local function newButton(parent, params, recipe)
+	local isTool = recipe == builtin.ToolButton
 	local button = { parent = newContext(), native = newContext(), params = params }
 	function button:render()
 		self.nativeNode = nil
@@ -782,7 +821,7 @@ local function newButton(parent, params, isTool)
 			"Styling bypassed or repeated a ToolButton replacement"
 		)
 		for _, node in ipairs(self.parent.nodes) do
-			if node.recipeId == react.GetRecipeId(isTool and builtin.ToolButton or builtin.ToggleButton) then
+			if node.recipeId == react.GetRecipeId(recipe) then
 				self.nativeNode = node
 			end
 			assert(_react.recipeMetas[node.recipeId] == nil, "Inline styling introduced a recipe context boundary")
@@ -841,7 +880,7 @@ toolParams.toolName = "Manager"
 toolParams.toolVariant = "main"
 toolParams.toolStack = toolStack
 toolParams.showFn, toolParams.hideFn = showFn, hideFn
-local toolButton = newButton(toolParent, toolParams, true)
+local toolButton = newButton(toolParent, toolParams, builtin.ToolButton)
 
 local foreignContentContext = newContext()
 foreignContentContext:render(unrelated, {})
@@ -851,14 +890,14 @@ local contentContext = newContext()
 local contentOk, contentError = pcall(contentContext.render, contentContext, toolParent, foreignContentParams)
 assert(
 	not contentOk and contentError:find("content belongs to another recipe context", 1, true),
-	"Test bridge accepted a foreign content node"
+	"Expected a foreign content error, got: " .. tostring(contentError)
 )
 local toggleParams = buttonParams()
 toggleParams.value = 0
 toggleParams.onValueChange = function(value)
 	changedValues[#changedValues + 1] = value
 end
-local toggleButton = newButton(toggleParent, toggleParams, false)
+local toggleButton = newButton(toggleParent, toggleParams, builtin.ToggleButton)
 local buttons = { toolButton, toggleButton }
 local cases = {
 	{ id = "normal", checked = false, attention = false, enabled = true },
@@ -920,6 +959,8 @@ for _, choice in ipairs(settings.background.choices) do
 end
 assert(attentionCalls == backgroundCaseCount, "Existing attention callback was lost or repeated")
 assert(toolButton.nativeNode.props.props[1].showFn == showFn and toolButton.nativeNode.props.props[1].hideFn == hideFn)
+assert(toolButton.nativeNode.props.props.n == 4, "Styling lost trailing nil arguments")
+assert(toolButton.nativeNode.props.props[2] == nil and toolButton.nativeNode.props.props[3] == "extra-tool-argument")
 assert(toolButton.parent.nodes[2].props.props[1].item == toolButton.parent.nodes[1].id)
 
 local referenceContext = newContext()
@@ -946,7 +987,7 @@ assert(
 )
 assert(nativeReferenceArgument.data == nativeReference, "Styling mutated the original reference argument")
 
-local extraParent = buttonParent("ModToolbarStyleFixture", builtin.ToggleButton)
+local extraParent = buttonParent("ModToolbarStyleFixture", builtin.ToggleButton, nil, table.pack(nil))
 local extraStyle = react.style({ class = "extra,third-party" })
 local gameBarParent = buttonParent("GameBar", builtin.ToggleButton)
 for _, parent in ipairs({ extraParent, toolbarReplacement, gameBarParent }) do
@@ -955,7 +996,14 @@ for _, parent in ipairs({ extraParent, toolbarReplacement, gameBarParent }) do
 		local extraParams = buttonParams()
 		extraParams.value = 0
 		local meta = extraContext:render(parent, prefix[1], prefix[2], extraParams)
-		assertBackground(meta, settings.colorGray(settings.background, selectedBackground, selectedContrast, "normal"))
+		if parent == gameBarParent then
+			assertBackground(
+				meta,
+				settings.colorGray(settings.background, selectedBackground, selectedContrast, "normal")
+			)
+		else
+			assert(meta.styleSheet == vanillaStyle, "Mod toolbar background received a game bar override")
+		end
 		local node = extraContext.nodesById[nativeReference:get().nodeId]
 		assert(
 			node.recipeId == react.GetRecipeId(builtin.ToggleButton) and node.props.style.class == extraStyle.data.class
@@ -972,19 +1020,26 @@ for _, prefix in ipairs({ { extraStyle, nativeReferenceArgument }, { nativeRefer
 	outsideParams.meta.class = "extra"
 	assert(outsideContext:render(outsideToolbar, outsideParams).styleSheet == nil)
 end
-for _, class in ipairs({ "third-party", "extraordinary" }) do
-	local unstyledContext = newContext()
-	local unstyledParams = buttonParams()
-	unstyledParams.meta.class = class
-	assert(unstyledContext:render(extraParent, unstyledParams).styleSheet == nil)
-	assert(#unstyledContext.states == 0, "A toolbar plugin button without the extra class was styled")
+for _, class in ipairs({ "third-party", "extraordinary", "celmi-tt-toolbar-btn", "" }) do
+	local customContext = newContext()
+	local customParams = buttonParams()
+	customParams.meta.class = class
+	local customMeta = customContext:render(extraParent, customParams)
+	assert(customMeta.styleSheet == vanillaStyle, "Custom toolbar classes received a game bar background")
+	assert(customMeta.onAttention ~= nil and #customContext.states > 0, "Custom toolbar classes bypassed icon styling")
+	assert(customParams.meta.class == class, "Toolbar styling changed a mod's classes")
+	local gameBarContext = newContext()
+	assert(
+		gameBarContext:render(gameBarParent, customParams).styleSheet == nil,
+		"Toolbar targeting escaped the GameBar extra button"
+	)
 end
 print("Dark UI toolbar targeting test passed (GameBar, registered plugins/replacements, unrelated extra buttons)")
 
 for _, field in ipairs({ "value", "initialValue" }) do
 	local invalidParams = buttonParams()
 	invalidParams[field] = false
-	local invalidToggle = newButton(toggleParent, invalidParams, false)
+	local invalidToggle = newButton(toggleParent, invalidParams, builtin.ToggleButton)
 	local ok, message = pcall(invalidToggle.render, invalidToggle)
 	assert(not ok and message:find("invalid toggle value", 1, true), "Styling accepted an invalid toggle value")
 end
@@ -1002,7 +1057,7 @@ local observingParent = react.RegisterRecipe("MapEditorToolButton", function(par
 	configured.content = builtin.Component({})
 	return builtin.ToolButton(configured)
 end)
-local observingButton = newButton(observingParent, buttonParams(), true)
+local observingButton = newButton(observingParent, buttonParams(), builtin.ToolButton)
 observingButton:render().onAttention(true)
 observingButton:render()
 assert(observingButton.parent.internals.mouseListener({
@@ -1077,11 +1132,11 @@ assert(changedValues[#changedValues] == 0)
 assertBackground(toggleButton:render(), settings.colorGray(settings.background, "gray", "standard", "normal"))
 local initialToggleParams = buttonParams()
 initialToggleParams.initialValue = 1
-local initialToggle = newButton(toggleParent, initialToggleParams, false)
+local initialToggle = newButton(toggleParent, initialToggleParams, builtin.ToggleButton)
 assertBackground(initialToggle:render(), settings.colorGray(settings.background, "gray", "standard", "selected"))
 local alreadyTaggedParams = buttonParams()
 alreadyTaggedParams.meta.class = "third-party-button"
-local alreadyTagged = newButton(toolParent, alreadyTaggedParams, true)
+local alreadyTagged = newButton(toolParent, alreadyTaggedParams, builtin.ToolButton)
 assertBackground(alreadyTagged:render(), settings.colorGray(settings.background, "gray", "standard", "normal"))
 
 for _, missingStack in ipairs({
@@ -1102,7 +1157,7 @@ for _, missingStack in ipairs({
 }) do
 	local unavailableParams = buttonParams()
 	unavailableParams.toolStack = missingStack
-	local unavailableTool = newButton(toolParent, unavailableParams, true)
+	local unavailableTool = newButton(toolParent, unavailableParams, builtin.ToolButton)
 	unavailableTool:render()
 	unavailableTool:step()
 	assertBackground(unavailableTool:render(), settings.colorGray(settings.background, "gray", "standard", "normal"))
@@ -1271,6 +1326,137 @@ for _, backgroundChoice in ipairs(settings.background.choices) do
 	end
 end
 
+do
+	local function assertModToolbarPreservesButtonStyles()
+		selectedBackground, selectedBorder, selectedIcon, selectedContrast = "gray", "white", "black", "standard"
+		local builtinParams = buttonParams()
+		builtinParams.meta.class = "extra"
+		local builtinButton = newButton(gameBarParent, builtinParams, builtin.ToggleButton)
+		assertCombinedStyle(builtinButton:render(), selectedBackground, selectedBorder, selectedContrast, "normal")
+		assertIconStyle(builtinButton, selectedIcon, selectedContrast, "normal")
+
+		local modIconParams = { meta = { class = "mod-icon", styleSheet = foreignStyle }, path = "mod-icon.tga" }
+		local modToolbarParent = buttonParent("ModToolbarStyleFixture", builtin.ToggleButton, function()
+			return builtin.ImageView(modIconParams)
+		end)
+		for _, parent in ipairs({ modToolbarParent, toolbarReplacement }) do
+			for _, hasInlineStyle in ipairs({ false, true }) do
+				local modParams = buttonParams()
+				modParams.meta.class = "custom-toolbar"
+				modParams.meta.styleSheet = hasInlineStyle and foreignStyle or nil
+				local modButton = newButton(parent, modParams, builtin.ToggleButton)
+				for _, backgroundChoice in ipairs(settings.background.choices) do
+					selectedBackground = backgroundChoice.id
+					for _, contrast in ipairs(settings.stateContrast.choices) do
+						selectedContrast = contrast.id
+						for _, case in ipairs(cases) do
+							modParams.value = case.checked and 1 or 0
+							modParams.meta.enabled = case.enabled
+							for _, borderChoice in ipairs(settings.border.choices) do
+								selectedBorder = borderChoice.id
+								for _, iconId in ipairs({ "black", "white", "vanilla" }) do
+									selectedIcon = iconId
+									modButton:change(settings.background, selectedBackground)
+									modButton:change(settings.border, selectedBorder)
+									modButton:change(settings.icon, selectedIcon)
+									modButton:change(settings.stateContrast, selectedContrast)
+									modButton:render().onAttention(case.attention)
+									local meta = modButton:render()
+									if hasInlineStyle then
+										assert(
+											meta.styleSheet == foreignStyle,
+											"Game bar settings replaced a mod's button style"
+										)
+									else
+										assertCombinedStyle(meta, "vanilla", "vanilla", selectedContrast, case.id)
+									end
+									local imageNode = modButton.parent.nodes[1]
+									local imageMetaNode = modButton.parent.nodes[2]
+									local content = modButton.nativeNode.props.props[1].content
+									local iconGray =
+										settings.colorGray(settings.icon, selectedIcon, selectedContrast, case.id)
+									if iconGray == nil then
+										assert(content == imageMetaNode.id, "Vanilla replaced the mod icon's metadata")
+									else
+										local iconMeta = modButton.parent.nodesById[content].props.props[1]
+										assert(iconMeta.item == imageMetaNode.id, "Mod icon metadata was lost")
+										assertMergedStyle(iconMeta.styleSheet, { color = iconMeta.styleSheet.color })
+										assertGray(iconMeta.styleSheet.color, iconGray)
+									end
+									assert(
+										imageMetaNode.props.props[1].styleSheet == foreignStyle,
+										"Mod icon's original style was mutated"
+									)
+									assert(imageNode.props.props[1].path == modIconParams.path)
+									assert(modParams.meta.styleSheet == (hasInlineStyle and foreignStyle or nil))
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	assertModToolbarPreservesButtonStyles()
+
+	local function assertAdditionalToolbarButtons()
+		selectedBackground, selectedBorder, selectedIcon, selectedContrast = "black", "white", "gray", "standard"
+		for _, fixture in ipairs({
+			{ parent = buttonParent("ModToolbarActionFixture", builtin.Button), recipe = builtin.Button },
+			{ parent = buttonParent("ModToolbarToolFixture", builtin.ToolButton), recipe = builtin.ToolButton },
+		}) do
+			local params = buttonParams()
+			local clicks = 0
+			if fixture.recipe == builtin.Button then
+				params.onClick = function()
+					clicks = clicks + 1
+				end
+			else
+				params.toolName, params.toolVariant, params.toolStack = "Manager", "main", toolStack
+			end
+			activeTool, activeVariant = nil, "main"
+			local button = newButton(fixture.parent, params, fixture.recipe)
+			local function assertState(stateId)
+				assertCombinedStyle(button:render(), "vanilla", "vanilla", selectedContrast, stateId)
+				assertIconStyle(button, selectedIcon, selectedContrast, stateId)
+			end
+			assertState("normal")
+			if fixture.recipe == builtin.Button then
+				local nativeParams = button.nativeNode.props.props[1]
+				assert(nativeParams.onClick == params.onClick and nativeParams.onValueChange == nil)
+				nativeParams.onClick()
+				assert(clicks == 1, "Toolbar action callback was lost or repeated")
+			else
+				activeTool = expectedTool
+				button:step()
+				assertState("selected")
+				activeTool = nil
+				button:step()
+			end
+			button:render().onAttention(true)
+			assertState("idleHover")
+			local mouse = api.gui.mouse.Event.Type
+			button.parent.internals.mouseListener({ type = mouse.Pressed, button = 0, x = 5, y = 5 })
+			assertState("normal")
+			button.parent.internals.mouseListener({ type = mouse.Released, button = 0, x = 5, y = 5 })
+			assertState("idleHover")
+			params.meta.enabled = false
+			assertState("disabled")
+			params.meta.enabled = true
+			button:render().onAttention(false)
+			params.meta.styleSheet = foreignStyle
+			assert(button:render().styleSheet == foreignStyle, "Game bar settings replaced the mod's button style")
+			button:change(settings.background, "vanilla")
+			button:change(settings.icon, "vanilla")
+			assert(button:render().styleSheet == foreignStyle, "Vanilla lost the mod's button style")
+			assertIconStyle(button, "vanilla", selectedContrast, "normal")
+			assert(params.meta.class == nil, "Styling added a class to a mod button")
+		end
+	end
+	assertAdditionalToolbarButtons()
+end
+print("Dark UI mod toolbar test passed (toggle/action/tool buttons, custom classes, states, borders, replacements)")
+
 selectedBackground, selectedIcon, selectedContrast = "gray", "vanilla", "standard"
 activeTool = nil
 toggleParams.value = 0
@@ -1309,7 +1495,7 @@ for _, parent in ipairs({ toolParent, toggleParent }) do
 	if not isTool then
 		iconParams.value = 0
 	end
-	local iconButton = newButton(parent, iconParams, isTool)
+	local iconButton = newButton(parent, iconParams, isTool and builtin.ToolButton or builtin.ToggleButton)
 	assert(iconButton:render().styleSheet == foreignStyle, "Icon-only styling replaced the button's inline style")
 	assertIconStyle(iconButton, selectedIcon, selectedContrast, "normal")
 	iconButton:render().onAttention(true)
@@ -1339,11 +1525,11 @@ end
 local imageRef = { set = reference.set }
 local imageParams = { meta = { class = "third-party-icon", tooltip = "Icon tooltip" }, path = "mod-icon.tga" }
 local metadataParent = buttonParent("ModToolbarIconProbe", builtin.ToggleButton, function()
-	return builtin.ImageView(react.ref({ imageRef }), imageParams)
+	return builtin.ImageView(react.ref({ imageRef }), imageParams, nil)
 end)
 local metadataParams = buttonParams()
 metadataParams.meta.class = "extra,mod-toolbar"
-local metadataButton = newButton(metadataParent, metadataParams, false)
+local metadataButton = newButton(metadataParent, metadataParams, builtin.ToggleButton)
 for _, choice in ipairs(settings.icon.choices) do
 	selectedIcon = choice.id
 	metadataButton:change(settings.icon, selectedIcon)
@@ -1381,7 +1567,7 @@ local nonImageParent = buttonParent("NonImageToolbarProbe", builtin.ToggleButton
 end)
 local nonImageParams = buttonParams()
 nonImageParams.meta.class = "extra"
-local nonImageButton = newButton(nonImageParent, nonImageParams, false)
+local nonImageButton = newButton(nonImageParent, nonImageParams, builtin.ToggleButton)
 nonImageButton:render()
 assert(nonImageButton.nativeNode.props.props[1].content == nonImageButton.parent.nodes[1].id)
 assert(#nonImageButton.parent.nodes == 3, "Icon styling changed non-image content")
@@ -1390,18 +1576,18 @@ local siblingParent = buttonParent("SiblingIconProbe", builtin.ToggleButton, fun
 	builtin.ImageView({ path = "unrelated-image.tga" })
 	return builtin.ImageView({ path = "button-image.tga" })
 end)
-local siblingButton = newButton(siblingParent, nonImageParams, false)
+local siblingButton = newButton(siblingParent, nonImageParams, builtin.ToggleButton)
 siblingButton:render()
 assertIconStyle(siblingButton, selectedIcon, selectedContrast, "normal")
 local styledContent = siblingButton.parent.nodesById[siblingButton.nativeNode.props.props[1].content]
 assert(styledContent.props.props[1].item == siblingButton.parent.nodes[2].id, "Icon styling selected a sibling image")
 assert(#siblingButton.parent.nodes == 5, "Icon styling added metadata to an unrelated image")
 
-local untargeted = newButton(unrelatedToolParent, buttonParams(), true)
+local untargeted = newButton(unrelatedToolParent, buttonParams(), builtin.ToolButton)
 untargeted:render()
 assert(untargeted.nativeNode.props.props[1].content == untargeted.parent.nodes[1].id)
 assert(#untargeted.parent.nodes == 3, "Icon styling escaped the toolbar button targets")
-local excluded = newButton(constructionParent, bulldozerParams, true)
+local excluded = newButton(constructionParent, bulldozerParams, builtin.ToolButton)
 excluded:render()
 assertIconStyle(excluded, "vanilla", selectedContrast, "normal")
 includeBulldozer = true
@@ -1441,7 +1627,8 @@ for _, parent in ipairs({ toolParent, toggleParent, constructionParent }) do
 		resetParams.meta.id = "menu.bulldozer"
 	end
 	includeBulldozer = true
-	local resetButton = newButton(parent, resetParams, parent ~= toggleParent)
+	local resetButton =
+		newButton(parent, resetParams, parent ~= toggleParent and builtin.ToolButton or builtin.ToggleButton)
 	local retained = {}
 	updateRetainedStyles(resetButton, retained)
 	assert(retained.button.backgroundColor1 ~= nil and retained.button.borderImage.fileName == "")
@@ -1488,7 +1675,7 @@ for _, parent in ipairs({ toolParent, toggleParent }) do
 	local modParams = buttonParams()
 	modParams.meta.styleSheet = foreignStyle
 	modParams.value = parent == toggleParent and 0 or nil
-	local modButton = newButton(parent, modParams, parent == toolParent)
+	local modButton = newButton(parent, modParams, parent == toolParent and builtin.ToolButton or builtin.ToggleButton)
 	local merged = applyNativeStyle(nil, modButton:render())
 	assertMergedStyle(merged, {
 		backgroundColor1 = merged.backgroundColor1,

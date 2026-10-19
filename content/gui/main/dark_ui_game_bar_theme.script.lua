@@ -8,7 +8,8 @@ local function install(replacementApi)
 	if installed then
 		return
 	end
-	if uiTweaks.requireSettings() == nil then
+	local modules = uiTweaks.requireGameBarModules()
+	if modules == nil then
 		return
 	end
 	assert(
@@ -16,10 +17,10 @@ local function install(replacementApi)
 		"Dark UI requires the React replacement API"
 	)
 
-	local recipeComposition = require("apasz_ui_tweaks::/gui/ui_tweaks/recipe_composition.lua")
-	local reactSettings = require("apasz_ui_tweaks::/gui/ui_tweaks/react_settings.lua")
+	local recipeComposition = modules.recipeComposition
+	local reactSettings = modules.reactSettings
 	local settings = require("apasz_dark_ui_1::/gui/main/dark_ui_settings.lua")
-	local storage = require("apasz_ui_tweaks::/gui/ui_tweaks/settings_storage.lua")
+	local storage = modules.storage
 	local react = ug_require("::/gui/main/react.lua")
 	local builtin = ug_require("::/gui/main/builtin.lua")
 	local guiUtil = require("apasz_dark_ui_1::/gui/main/dark_ui_gui_util.lua")
@@ -27,28 +28,55 @@ local function install(replacementApi)
 	local gameBar = ug_require("::/gui/game_bar/game_bar.tl")
 	local modButtonArea = ug_require("::/gui/main/main_mod_button_area.tl")
 	local unpackValues = assert(table.unpack or unpack, "Dark UI requires a Lua unpack function")
-	local toolButtonRecipes = {
-		ManagerToolButton = true,
-		ConstructionToolButton = true,
-		MapEditorToolButton = true,
+	local builtinButtonTypes = {
+		ManagerToolButton = "ToolButton",
+		ConstructionToolButton = "ToolButton",
+		MapEditorToolButton = "ToolButton",
+		NodeEditorButton = "ToggleButton",
 	}
 	local bulldozerIds = {
 		["menu.bulldozer"] = true,
 		["menu.moduleBulldozer"] = true,
 	}
 	-- There is no public ancestry lookup. Match toolbar recipe identities instead of a global CSS class.
-	local extraButtonRecipes = {}
-	local function includeExtraButtonRecipe(recipe)
+	local toolbarRecipeIsMod = {}
+	local function includeToolbarRecipe(recipe, isModToolbar)
 		local recipeId = react.GetRecipeId(recipe)
-		while recipeId ~= nil and not extraButtonRecipes[recipeId] do
-			extraButtonRecipes[recipeId] = true
+		while recipeId ~= nil and toolbarRecipeIsMod[recipeId] == nil do
+			toolbarRecipeIsMod[recipeId] = isModToolbar
 			local replacement = _react.recipeReplace[recipeId]
 			recipeId = replacement ~= nil and react.GetRecipeId(replacement) or nil
 		end
 	end
-	includeExtraButtonRecipe(gameBar.GameBar)
+	includeToolbarRecipe(gameBar.GameBar, false)
 	for _, plugin in ipairs(react.getPlugins(modButtonArea.MainModButtonAreaExtension)) do
-		includeExtraButtonRecipe(plugin.recipe)
+		includeToolbarRecipe(plugin.recipe, true)
+	end
+
+	local function getButtonRecipeScope()
+		return builtinButtonTypes[react.getCurrentRecipeName()], toolbarRecipeIsMod[react.getCurrentRecipeId()]
+	end
+
+	local function getRecipeParams(...)
+		local first, second = ...
+		local firstIsStyle = type(first) == "table" and first.is_react_style_info == true
+		local firstIsRef = type(first) == "table" and first.is_react_ref_info == true
+		local index = 1
+		if firstIsStyle or firstIsRef then
+			index = 2
+			if
+				type(second) == "table"
+				and (
+					firstIsStyle and second.is_react_ref_info == true
+					or firstIsRef and second.is_react_style_info == true
+				)
+			then
+				index = 3
+			end
+		end
+		-- React's parameters follow optional style/ref prefixes; trailing arguments are allowed.
+		local params = select(index, ...)
+		return params, index
 	end
 
 	local function shallowCopy(source)
@@ -157,6 +185,10 @@ local function install(replacementApi)
 		local imagesByContext = setmetatable({}, { __mode = "k" })
 		recipeComposition.interceptActive(builtin.ImageView, "ImageView", function(renderOriginal)
 			return function(...)
+				local buttonType, isModToolbar = getButtonRecipeScope()
+				if buttonType == nil and isModToolbar == nil then
+					return renderOriginal(...)
+				end
 				local context = react.getCallingRecipeCtx()
 				local images = imagesByContext[context]
 				if images == nil then
@@ -174,8 +206,7 @@ local function install(replacementApi)
 					images.cleanupPending = true
 					react.enqueueJoin(images.clear, "Dark UI icon tracking")
 				end
-				local count = select("#", ...)
-				local params = count > 0 and select(count, ...) or nil
+				local params = getRecipeParams(...)
 				local node = renderOriginal(...)
 				if node ~= nil then
 					images.metaByNode[node] = type(params) == "table" and params.meta or emptyMeta
@@ -211,14 +242,15 @@ local function install(replacementApi)
 	local function makeInlineButtonStyle(name, renderOriginal)
 		local mouseEvents = api.gui.mouse.Event.Type
 		local isToolButton = name == "ToolButton"
+		local isToggleButton = name == "ToggleButton"
 		local function toggleChecked(value)
 			assert(value == TOGGLE_UNCHECKED or value == TOGGLE_CHECKED, "Dark UI received an invalid toggle value")
 			return value == TOGGLE_CHECKED
 		end
 
 		-- Content nodes belong to the calling recipe; keep construction in that context.
-		return function(arguments, applyOverrides)
-			local params = arguments[arguments.n]
+		return function(arguments, paramsIndex, applyOverrides, isModToolbar)
+			local params = arguments[paramsIndex]
 			local meta = params.meta or {}
 			local initialValue = params.value
 			if initialValue == nil then
@@ -227,7 +259,7 @@ local function install(replacementApi)
 			if initialValue == nil then
 				initialValue = TOGGLE_UNCHECKED
 			end
-			local checked = react.useState(not isToolButton and toggleChecked(initialValue))
+			local checked = react.useState(isToggleButton and toggleChecked(initialValue))
 			local attention = react.useState(false)
 			local pressed = react.useState(false)
 			local buttonRef = react.useNodeRef()
@@ -237,6 +269,9 @@ local function install(replacementApi)
 			if not applyOverrides then
 				backgroundChoiceId, borderChoiceId, iconChoiceId =
 					settings.VANILLA_CHOICE_ID, settings.VANILLA_CHOICE_ID, settings.VANILLA_CHOICE_ID
+			elseif isModToolbar then
+				backgroundChoiceId = settings.VANILLA_CHOICE_ID
+				borderChoiceId = settings.VANILLA_CHOICE_ID
 			end
 			local contrastId = reactSettings.useValue(settings.SECTION_ID, settings.stateContrast.key):old()
 			if isToolButton then
@@ -280,7 +315,7 @@ local function install(replacementApi)
 					meta.onAttention(value)
 				end
 			end
-			if not isToolButton then
+			if isToggleButton then
 				configured.onValueChange = function(value)
 					checked:set(toggleChecked(value))
 					if params.onValueChange ~= nil then
@@ -289,7 +324,7 @@ local function install(replacementApi)
 				end
 			end
 			local isChecked = checked:old()
-			if not isToolButton and params.value ~= nil then
+			if isToggleButton and params.value ~= nil then
 				isChecked = toggleChecked(params.value)
 			end
 			assert(
@@ -312,11 +347,11 @@ local function install(replacementApi)
 			)
 			local iconGray = settings.colorGray(settings.icon, iconChoiceId, contrastId, stateId)
 			configured.content = styleInlineIcon(params.content, iconGray)
-			arguments[arguments.n] = configured
+			arguments[paramsIndex] = configured
 			local hasReference = false
-			for index = 1, math.min(2, arguments.n - 1) do
+			for index = 1, paramsIndex - 1 do
 				local argument = arguments[index]
-				if type(argument) == "table" and argument.is_react_ref_info then
+				if argument.is_react_ref_info == true then
 					local references = {}
 					if type(argument.data) == "table" then
 						for _, reference in ipairs(argument.data) do
@@ -332,7 +367,10 @@ local function install(replacementApi)
 				end
 			end
 			if not hasReference then
-				table.insert(arguments, 1, react.ref({ buttonRef }))
+				for index = arguments.n, 1, -1 do
+					arguments[index + 1] = arguments[index]
+				end
+				arguments[1] = react.ref({ buttonRef })
 				arguments.n = arguments.n + 1
 			end
 			return renderOriginal(unpackValues(arguments, 1, arguments.n))
@@ -344,27 +382,23 @@ local function install(replacementApi)
 		recipeComposition.interceptActive(recipe, name, function(renderOriginal)
 			local inlineStyle = makeInlineButtonStyle(name, renderOriginal)
 			return function(...)
-				local count = select("#", ...)
-				local params = count > 0 and select(count, ...) or nil
+				local params, paramsIndex = getRecipeParams(...)
 				if type(params) ~= "table" then
 					return renderOriginal(...)
 				end
 				local existingClass = params.meta and params.meta.class
 				if existingClass == nil then
-					for index = 1, math.min(2, count - 1) do
+					for index = 1, paramsIndex - 1 do
 						local argument = select(index, ...)
-						if type(argument) == "table" and argument.is_react_style_info then
+						if argument.is_react_style_info == true then
 							existingClass = argument.data.class
 						end
 					end
 				end
-				local parent = react.getCurrentRecipeName()
-				local targeted = name == "ToolButton" and toolButtonRecipes[parent] == true
-				if name == "ToggleButton" then
-					targeted = parent == "NodeEditorButton"
-						or extraButtonRecipes[react.getCurrentRecipeId()] == true
-							and hasClass(existingClass, "extra")
-				end
+				local buttonType, isModToolbar = getButtonRecipeScope()
+				local targeted = buttonType == name
+					or isModToolbar == true
+					or name == "ToggleButton" and isModToolbar == false and hasClass(existingClass, "extra")
 				if not targeted then
 					return renderOriginal(...)
 				end
@@ -374,7 +408,7 @@ local function install(replacementApi)
 					assert(type(included) == "boolean", "Dark UI bulldozer inclusion must be a boolean")
 				end
 				local arguments = table.pack(...)
-				return inlineStyle(arguments, included)
+				return inlineStyle(arguments, paramsIndex, included, isModToolbar == true)
 			end
 		end)
 	end
@@ -389,8 +423,7 @@ local function install(replacementApi)
 
 		recipeComposition.interceptActive(builtin.Component, "Component", function(renderOriginal)
 			return function(...)
-				local count = select("#", ...)
-				local params = count > 0 and select(count, ...) or nil
+				local params, paramsIndex = getRecipeParams(...)
 				if
 					react.getCurrentRecipeName() ~= "GameBarBackground"
 					or type(params) ~= "table"
@@ -409,8 +442,8 @@ local function install(replacementApi)
 				configured.meta = shallowCopy(params.meta)
 				configured.meta.styleSheet = guiUtil.mergeStyleSheet(params.meta.styleSheet, style)
 				local arguments = table.pack(...)
-				arguments[count] = configured
-				return renderOriginal(unpackValues(arguments, 1, count))
+				arguments[paramsIndex] = configured
+				return renderOriginal(unpackValues(arguments, 1, arguments.n))
 			end
 		end)
 	end
@@ -429,12 +462,13 @@ local function install(replacementApi)
 				end
 			end
 		)
-		includeExtraButtonRecipe(themedGameBar)
+		includeToolbarRecipe(themedGameBar, false)
 		return themedGameBar
 	end
 
 	interceptButton("ToolButton")
 	interceptButton("ToggleButton")
+	interceptButton("Button")
 	interceptInlineStrip()
 	replacementApi.ReplaceRecipe(gameBar.GameBar, registerThemedGameBar())
 	installed = true

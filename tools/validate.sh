@@ -10,6 +10,7 @@ if [[ $# -gt 1 ]]; then
 fi
 
 lua tests/settings_test.lua
+lua tests/ui_tweaks_compatibility_test.lua
 lua tests/settings_ui_test.lua
 if [[ $# -gt 0 ]]; then
     lua tests/settings_test.lua "$1"
