@@ -122,9 +122,10 @@ Coverage: [compatibility tests](tests/ui_tweaks_compatibility_test.lua) and
   There is no public ancestry lookup used by this integration, so a global `extra`
   selector would also affect unrelated windows. The built-in GameBar context help
   button still requires the `extra` class within its known recipe.
-- The stylesheet currently generates 12 rules. This is a tested project budget,
-  not an established engine ceiling. Do not describe the reported stylesheet
-  limitation as a confirmed numerical engine limit.
+- The game-bar stylesheet generates 12 rules; the build-control stylesheet adds
+  one rule. The game-bar count is a tested project budget, not an established
+  engine ceiling. Do not describe the reported stylesheet limitation as a
+  confirmed numerical engine limit.
 - Signal icons are reported as unaffected by interface themes in
   [the mod description](_metadata/description.html). Their cause and a fix remain
   unresolved. Colours baked into textures and custom skins can also remain
