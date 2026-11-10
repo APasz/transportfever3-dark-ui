@@ -216,3 +216,46 @@ resource fixtures exercise the settings in each language; the existing settings
 and React tests use the shared English translation fixture. These checks do not
 establish native text layout. Restart the game and inspect long settings labels
 in the desired language when verifying the interface in game.
+
+## Mods directly replacing builtin exports
+
+**ImageView crash confirmed in game on 2026-11-11; user confirmed the fix after reloading UI.**
+
+Loading failed with `UI Tweaks could not find the registered ImageView recipe`
+inside `makeInlineIconStyler`. The traffic-sign construction mod
+`knuddifant_verkehrszeichen_baukasten_pt3_de` captures `builtin.ImageView` and
+assigns an unregistered Lua wrapper directly to that export. The installed game's
+ImageView registration remains present; the exported function has no recipe ID.
+
+UI Tweaks' shared `interceptActive` helper now composes an unregistered builtin
+export in place. Preserve the registry entry: installing a wrapper that captures
+the registered constructor into that registry would recurse.
+
+Coverage: UI Tweaks' `recipe_composition_test.lua` checks preserved arguments,
+existing replacements, custom icon output, repeated interception, and invalid
+factories. The shipped React bridge suite also passed with a direct export wrapper
+injected before theme installation (30,936 ImageView calls). That temporary fixture
+was separate from the committed bridge suite.
+
+## Settings storage under the stricter sandbox
+
+**Saving failure confirmed in game on 2026-11-11 with preview build 40438 on Linux; migration covered by host tests.**
+
+Changing a UIT/Dark UI setting failed at `settings_storage.lua` with
+`API can only be used by privileged (non-moddable) scripts` from `setAppConfig`.
+The installed API declarations explicitly mark that writer as unavailable to mods.
+
+UI Tweaks now stores all contributed sections through
+`api.gui.game.getGuiSaveData`/`setGuiSaveData`, under `apasz_ui_tweaks`. Preferences
+are independent per savegame. Their changes apply immediately, survive UI reloads,
+and reach disk when the game is saved. On the first read in a save without UIT
+data, the shared storage module imports the legacy `AppConfig.mainMenuState`
+values, including Dark UI. It does not change the global config. An empty stored
+sections table records completed migration, so resets do not reimport old values.
+
+Dark UI's existing value migration continues through the shared storage module;
+its runtime code needs no separate persistence path. Coverage: UI Tweaks'
+`settings_storage_test.lua` and `settings_test.lua`, and Dark UI's updated
+`settings_ui_test.lua` with the privileged writer deliberately rejected. Native
+setting changes, saving, reopening the savegame, and separate-save behaviour still
+need an in-game check after the migration.

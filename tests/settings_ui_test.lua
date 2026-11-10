@@ -66,12 +66,24 @@ local appConfig = {
 	},
 }
 local originalConfig = appConfig
-local configWrites = 0
+local guiSaveData
+local guiWrites = 0
 local function nativeValue()
 	return {}
 end
 api = {
 	gui = {
+		game = {
+			getGuiSaveData = function(modId)
+				assert(modId == "apasz_ui_tweaks")
+				return guiSaveData or {}
+			end,
+			setGuiSaveData = function(modId, value)
+				assert(modId == "apasz_ui_tweaks")
+				guiSaveData = value
+				guiWrites = guiWrites + 1
+			end,
+		},
 		mouse = { Event = { Type = {} } },
 		StyleSheet = { new = nativeValue },
 		NinePatch = { new = nativeValue },
@@ -90,22 +102,9 @@ api = {
 		getAppConfig = function()
 			return appConfig
 		end,
-		setAppConfig = function(config, restart)
-			assert(restart == false)
-			appConfig = config
-			configWrites = configWrites + 1
+		setAppConfig = function()
+			error("API can only be used by privileged (non-moddable) scripts")
 		end,
-	},
-	type = {
-		AppConfig = {
-			new = function(config)
-				local copy = {}
-				for key, value in pairs(config) do
-					copy[key] = value
-				end
-				return copy
-			end,
-		},
 	},
 	res = {
 		genericRep = {
@@ -303,14 +302,13 @@ end
 
 resetHooks()
 local themeConfig, themedGameBar = installTheme(validationThemeConfig)
-assert(configWrites == 1)
-local migrated = appConfig.mainMenuState.apasz_ui_tweaks_settings.sections[settings.SECTION_ID]
+assert(guiWrites == 2, "Expected one import and one Dark UI value migration")
+local migrated = guiSaveData.sections[settings.SECTION_ID]
 assert(migrated.game_bar_background_color == "dark_gray" and migrated.game_bar_include_bulldozer == true)
+assert(appConfig == originalConfig, "Dark UI changed the global config")
 assert(appConfig.mainMenuState.unrelated == "preserved")
-assert(
-	appConfig.mainMenuState.apasz_ui_tweaks_settings.sections["another.mod"]
-		== originalConfig.mainMenuState.apasz_ui_tweaks_settings.sections["another.mod"]
-)
+assert(guiSaveData.sections["another.mod"].enabled == true)
+assert(originalConfig.mainMenuState.apasz_ui_tweaks_settings.sections["another.mod"].enabled == true)
 assert(
 	originalConfig.mainMenuState.apasz_ui_tweaks_settings.sections[settings.SECTION_ID].game_bar_background_color
 		== "gray_50"
@@ -410,7 +408,7 @@ local _, unregisteredThemedGameBar = installTheme()
 render(unregisteredThemedGameBar, { test = true })
 assert(unregisteredGameBarCalls == 1)
 assert(originalGameBarCalls == 1)
-assert(configWrites == 1, "Dark UI rewrote already migrated settings")
+assert(guiWrites == 2, "Dark UI rewrote already migrated settings")
 
 dofile("content/gui/main/dark_ui_game_bar_theme.res.lua")
 assert(data().data.order == 1000000)
